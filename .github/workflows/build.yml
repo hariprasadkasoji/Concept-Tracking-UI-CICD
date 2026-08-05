@@ -45,8 +45,17 @@ jobs:
         shell: powershell
         run: |
           Import-Module WebAdministration
-          Stop-WebAppPool -Name "CONCEPT-TRACKING-UI-CICD"
-          Start-Sleep -Seconds 5
+      
+          $appPool = "CONCEPT-TRACKING-UI-CICD"
+      
+          if ((Get-WebAppPoolState -Name $appPool).Value -eq "Started") {
+              Stop-WebAppPool -Name $appPool
+              Write-Host "App pool stopped"
+              Start-Sleep -Seconds 5
+          }
+          else {
+              Write-Host "App pool already stopped, continuing..."
+          }
 
       - name: Copy Angular build to IIS folder
         shell: powershell
