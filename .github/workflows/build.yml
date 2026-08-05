@@ -40,7 +40,12 @@ jobs:
 
       - name: Build Angular application
         run: npm run build -- --configuration production
-
+        
+      - name: Check Angular build output
+        shell: powershell
+        run: |
+          Get-ChildItem "$env:GITHUB_WORKSPACE\dist" -Recurse
+        
       - name: Stop IIS app pool before file copy
         shell: powershell
         run: |
