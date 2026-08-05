@@ -79,7 +79,7 @@ jobs:
             $attempt++
 
             try {
-              $response = curl.exe -s -o NUL -w "%{http_code}" https://localhost/8400
+              $response = curl.exe -k -s -o NUL -w "%{http_code}" https://localhost:8400/
               if ($response -eq "200") {
                 Write-Host "Application is healthy after $attempt attempts."
                 $success = $true
