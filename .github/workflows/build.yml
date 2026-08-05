@@ -66,10 +66,10 @@ jobs:
         shell: powershell
         run: |
           robocopy `
-            "$env:GITHUB_WORKSPACE\dist\concept-tracking-ui\browser" `
+            "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser" `
             "C:\apps\concept-tracking-CICD\ui" `
             /MIR
-
+      
           if ($LASTEXITCODE -ge 8) {
             exit 1
           } else {
