@@ -1,0 +1,228 @@
+<app-layout>
+  <div class="dashboard-page">
+    <!-- ── Page Header ─────────────────────────────────── -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1 class="page-title">Concept Management</h1>
+        <p class="page-subtitle">Track, manage, and submit concepts through the workflow</p>
+      </div>
+      <button class="btn-add-concept" (click)="onAddNewConcept()">+ Add New Concept</button>
+    </div>
+
+    <!-- ── Stat Cards ──────────────────────────────────── -->
+    <div class="stats-grid">
+      <!-- Total Concepts -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">Total Concepts</p>
+          <p class="stat-value">{{ totalConceptsDisplay }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #eff6ff">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#3B82F6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 3" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- New Concepts -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">New Concepts</p>
+          <p class="stat-value">{{ newConcepts }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #eff6ff">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#3B82F6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">In Progress</p>
+          <p class="stat-value">{{ conceptsInProgress }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #eff6ff">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#3B82F6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Pending Client Approvals -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">Pending Approvals</p>
+          <p class="stat-value">{{ pendingApprovals }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #fffbeb">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#F59E0B"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- QA Scheduled -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">QA Scheduled</p>
+          <p class="stat-value">{{ qaScheduled }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #eff6ff">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#3B82F6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Production Ready -->
+      <div class="stat-card">
+        <div class="stat-body">
+          <p class="stat-label">Production Ready</p>
+          <p class="stat-value">{{ productionReady }}</p>
+        </div>
+        <div class="stat-icon-wrap" style="background: #f0fdf4">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#22C55E"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        </div>
+      </div>
+    </div>
+    <!-- /stats-grid -->
+
+    <!-- ── Concepts Table ─────────────────────────────── -->
+    <div class="table-card">
+      <!-- Header: title + search -->
+      <div class="table-header">
+        <h2 class="table-title">All Concepts</h2>
+        <div class="table-search-wrap">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            class="table-search-input"
+            type="text"
+            [(ngModel)]="searchQuery"
+            placeholder="Search concepts, status…"
+          />
+          <button *ngIf="searchQuery" class="table-search-clear" (click)="searchQuery = ''">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94a3b8"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid body -->
+      <div class="table-scroll-wrapper">
+        <!-- Loading -->
+        <div *ngIf="loading" class="table-empty-state">
+          <div class="ct-loader">
+            <div class="ct-loader-track">
+              <div class="ct-loader-dots">
+                <span class="ct-loader-dot"></span>
+                <span class="ct-loader-dot"></span>
+                <span class="ct-loader-dot"></span>
+              </div>
+            </div>
+            <span class="ct-loader-label">Loading concepts…</span>
+          </div>
+        </div>
+
+        <!-- AG Grid -->
+        <ag-grid-angular
+          *ngIf="!loading"
+          class="ag-theme-alpine concept-grid"
+          [rowData]="rowData"
+          [columnDefs]="columnDefs"
+          [defaultColDef]="defaultColDef"
+          [pagination]="pagination"
+          [paginationPageSize]="paginationPageSize"
+          [paginationPageSizeSelector]="paginationPageSizeSelector"
+          [quickFilterText]="searchQuery"
+          (cellClicked)="onGridCellClicked($event)"
+        >
+        </ag-grid-angular>
+      </div>
+    </div>
+    <!-- /table-card -->
+  </div>
+  <!-- /dashboard-page -->
+</app-layout>

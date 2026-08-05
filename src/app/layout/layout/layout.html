@@ -1,0 +1,206 @@
+<!-- ═══════════════════════════════════════════
+     Full-width top navigation bar
+════════════════════════════════════════════ -->
+<div class="app-shell">
+  <!-- TOP NAV BAR -->
+  <header class="top-nav">
+    <!-- Logo cell (same width as sidebar below) -->
+    <div class="top-nav-logo">
+      <img src="Images/medreview_icon.png" alt="MedReview" class="nav-logo-img" />
+    </div>
+
+    <div class="project">
+      <p class="project-name">CONCEPT TRACKING</p>
+    </div>
+
+    <!-- Search -->
+    <!-- <div class="search-wrapper">
+      <span class="search-icon">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="6" cy="6" r="5" stroke="#94a3b8" stroke-width="1.5" />
+          <path d="M10 10L13 13" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+        </svg>
+      </span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search anything..."
+        [(ngModel)]="searchQuery"
+      />
+    </div> -->
+
+    <!-- Spacer -->
+    <div class="top-nav-spacer"></div>
+
+    <!-- Actions -->
+    <div class="top-nav-actions">
+      <!-- <button class="icon-btn" title="Notifications">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#64748b"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        >
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+      </button> -->
+      <div class="avatar-img-wrapper">
+        <img
+          src="Images/avatar.png"
+          alt="User"
+          class="avatar-img"
+          onerror="
+            this.style.display = 'none';
+            this.nextElementSibling.style.display = 'flex';
+          "
+        />
+
+        <div class="avatar-fallback" style="display: none; padding: 7px">
+          {{ userInitials }}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BODY: sidebar + content area -->
+  <div class="app-layout">
+    <!-- ── Sidebar icon rail ── -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <a class="nav-item" title="Dashboard" routerLink="/dashboard" routerLinkActive="active">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+        </a>
+        <a class="nav-item" title="Concepts" routerLink="/concept-create" routerLinkActive="active">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v4l3 3" />
+          </svg>
+        </a>
+
+        <!-- Left-panel collapse toggle — only rendered when the hosting
+             page opts in (e.g. Concept Create), via [showPanelToggle]="true" -->
+        <button
+          class="nav-item panel-toggle-btn-nav"
+          *ngIf="showPanelToggle"
+          (click)="togglePanel()"
+          [title]="panelCollapsed ? 'Expand panel' : 'Collapse panel'"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            [class.rotated]="panelCollapsed"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <!-- <a class="nav-item" title="Clients">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </a>
+        <a class="nav-item" title="Tasks">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <polyline points="9 11 12 14 22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+        </a>
+        <a class="nav-item" title="Reports">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="8" y1="13" x2="16" y2="13" />
+            <line x1="8" y1="17" x2="16" y2="17" />
+          </svg>
+        </a>
+        <a class="nav-item" title="Settings">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+            />
+          </svg>
+        </a> -->
+      </nav>
+      <div class="sidebar-bottom">
+        <a class="nav-item" title="Logout" (click)="onLogout()">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </a>
+      </div>
+    </aside>
+    <main class="layout-content">
+      <ng-content></ng-content>
+    </main>
+  </div>
+  <!-- /app-layout -->
+</div>
+<!-- /app-shell -->

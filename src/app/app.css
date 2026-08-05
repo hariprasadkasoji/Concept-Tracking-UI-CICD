@@ -1,0 +1,7 @@
+/* Toster Container */
+#toast-container>div {
+    width: 300px !important;
+    height: 70px !important;
+    font-size: 14px;
+    font-weight: lighter;
+}

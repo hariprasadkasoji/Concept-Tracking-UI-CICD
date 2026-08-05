@@ -1,0 +1,52 @@
+@if (loading) {
+  <div class="loader-overlay">
+    <img src="/Images/loader.gif" alt="Loading..." />
+  </div>
+}
+<div class="login-wrapper">
+  <div class="login-container">
+    <div class="login-left">
+      <div class="image-background">
+        <img src="Images/medreview_logo.png" class="image-logo" alt="Logo" />
+        <!-- <img src="Images/medreview_logo.png" class="image-logo" alt="Logo" /> -->
+      </div>
+    </div>
+    <div class="login-right">
+      <h2>Sign in to Concept Tracker</h2>
+
+      <form [formGroup]="loginForm" (ngSubmit)="login()" novalidate>
+        <!-- <p class="select-label">Select Client</p> -->
+
+        <!-- <div class="form-group icon-inside">
+          <div class="input-wrapper">
+            <img src="Images/user.png" alt="Client Icon" class="input-icon" />
+            <select id="client" formControlName="client" [disabled]="true">
+              <option value="">Client</option>
+              <option *ngFor="let client of clients" [value]="client.name">
+                {{ client.name }}
+              </option>
+            </select>
+            <img src="Images/down.png" alt="Dropdown" class="dropdown-arrow" />
+          </div>
+          <div
+            *ngIf="
+              loginForm.controls['client'].invalid &&
+              (loginForm.controls['client'].dirty || submitted)
+            "
+            class="form-error"
+          >
+            Client selection is required.
+          </div>
+        </div> -->
+
+        <div class="sso-container">
+          <button type="submit" class="sso-btn" [disabled]="isLogin">
+            <img src="Images/right-arrow.png" alt="SSO Icon" class="sso-icon" />
+
+            {{ isLogin ? 'SIGNING IN...' : 'SIGN IN' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

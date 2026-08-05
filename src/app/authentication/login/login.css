@@ -1,0 +1,272 @@
+/* --- Base Reset and Layout --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    /* Using a more modern font */
+    background-color: #f0f2f5;
+}
+
+.login-wrapper {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-container {
+    display: flex;
+    width: 900px;
+    height: 500px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    border-radius: 15px;
+    overflow: hidden;
+    margin: 50px;
+}
+
+/* --- Left Panel --- */
+.login-left {
+    width: 40%;
+    background-color: #0179b4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-background {
+    background: rgba(255, 255, 255, 0.49);
+    padding: 30px;
+    width: 85%;
+    border-top-left-radius: 34px;
+    border-bottom-right-radius: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-logo {
+    width: 100%;
+    max-width: 250px;
+    object-fit: contain;
+}
+
+/* --- Right Panel (Updated) --- */
+.login-right {
+    width: 60%;
+    background-color: #fff;
+    padding: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* Center form content */
+}
+
+.login-right h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333333;
+    margin-bottom: 20px;
+}
+
+.login-right form {
+    width: 100%;
+    max-width: 320px;
+    /* Constrain form width for a cleaner look */
+}
+
+/* --- New Form Styling for Dropdown and SSO Button --- */
+
+.select-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #555C60;
+    margin-bottom: 8px;
+    display: block;
+    /* Ensure label is on its own line */
+}
+
+.form-group.icon-inside {
+    margin-bottom: 20px;
+}
+
+
+.input-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    z-index: 1;
+}
+
+.dropdown-arrow {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+    /* Make sure it doesn't block the select click */
+    z-index: 1;
+}
+
+
+/* Fallback for the dropdown arrow if the image is not found */
+.input-wrapper select::-ms-expand {
+    display: none;
+}
+
+.sso-container {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.sso-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 48px;
+    background-color: #4A90E2;
+    color: #ffffff;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.sso-btn:hover {
+    background-color: #357ABD;
+}
+
+.sso-icon {
+    margin-right: 10px;
+    width: 20px;
+    height: 20px;
+}
+
+/* General error message styling */
+.form-error {
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+
+/* --- Other retained styles --- */
+.signup {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 14px;
+}
+
+.signup a {
+    color: #2a91fc;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.claim-modal-loader {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.claim-modal-loader-img {
+    height: 25px;
+    width: 25px;
+}
+
+/* --- Utility Class to Disable Client Selection --- */
+/* Add this class to your form element to hide the client selection section. */
+.disable-client-selection .select-label,
+.disable-client-selection .form-group.icon-inside {
+    display: none;
+}
+
+/* Adjust the margin of the SSO button when the client selection is hidden */
+.disable-client-selection .sso-container {
+    margin-top: 0;
+}
+
+/* --- Media Queries --- */
+@media (max-width: 768px) {
+    .login-container {
+        flex-direction: column;
+        height: auto;
+        width: 90%;
+    }
+
+    .login-left,
+    .login-right {
+        width: 100%;
+        padding: 30px;
+    }
+
+    .login-left {
+        height: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-right {
+        padding: 20px;
+    }
+
+    .login-right h2 {
+        font-size: 18px;
+    }
+
+    .sso-btn {
+        font-size: 14px;
+    }
+}
+
+.input-wrapper select {
+    width: 100%;
+    height: 100%;
+    padding-left: 50px;
+    /* Space for the icon */
+    padding-right: 40px;
+    border-radius: 8px;
+    border: none;
+    background-color: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    color: #333333;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+    height: 45px;
+    border-radius: 8px;
+    /* Slightly more rounded corners */
+    background-color: #f7f7f7;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.sso-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

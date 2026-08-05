@@ -1,0 +1,433 @@
+/* ═══════════════════════════════════════════════
+   Design tokens
+═══════════════════════════════════════════════ */
+:host {
+    --blue-accent: #3B82F6;
+    --green: #22C55E;
+    --amber: #F59E0B;
+
+    --bg-page: #F4F6FA;
+    --bg-white: #ffffff;
+
+    --text-primary: #1a1a2e;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+
+    --border: #e2e8f0;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --shadow-card: 0 1px 4px rgba(0, 0, 0, .06), 0 0 0 1px rgba(0, 0, 0, .04);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   Page wrapper
+═══════════════════════════════════════════════ */
+.dashboard-page {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-family: var(--font);
+    background: var(--bg-page);
+    min-height: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   Page header
+═══════════════════════════════════════════════ */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+}
+
+.btn-add-concept {
+    padding: 10px 24px;
+    background: var(--blue-accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    white-space: nowrap;
+    transition: background .15s;
+}
+
+.btn-add-concept:hover {
+    background: #2563eb;
+}
+
+/* ═══════════════════════════════════════════════
+   Stats grid  — 6 cols → 3 → 2 as screen shrinks
+═══════════════════════════════════════════════ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+}
+
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 720px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 420px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-card {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.stat-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .7px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.stat-icon-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   Table card
+═══════════════════════════════════════════════ */
+.table-card {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Grows to fill remaining page height */
+    flex: 1;
+    min-height: 0;
+}
+
+/* ── Table header (title + search) ───────────── */
+.table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 18px 24px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.table-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* ── Search bar ───────────────────────────────── */
+.table-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 7px 12px;
+    min-width: 220px;
+    max-width: 320px;
+    flex: 1;
+}
+
+@media (max-width: 600px) {
+    .table-search-wrap {
+        min-width: 100%;
+    }
+}
+
+.table-search-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--text-primary);
+    flex: 1;
+    min-width: 0;
+}
+
+.table-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.table-search-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.table-search-clear:hover svg {
+    stroke: var(--text-secondary);
+}
+
+/* ── Scroll wrapper — fills remaining card height ─ */
+.table-scroll-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Loading state ────────────────────────────── */
+.table-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 300px;
+    text-align: center;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ── AG Grid ──────────────────────────────────── */
+.concept-grid {
+    width: 100%;
+    /* Fill all available vertical space in the card */
+    flex: 1;
+    min-height: 300px;
+}
+
+/* ═══════════════════════════════════════════════
+   Custom loader — "stage tracker" pulse
+   Same motif used on the concept-create page: a signal travels along
+   a track and lights up three checkpoints in sequence, looping —
+   echoes the Concept Development → Client Approval → Supporting
+   Document stepper instead of being a generic spinner.
+═══════════════════════════════════════════════ */
+.ct-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 10px;
+}
+
+.ct-loader-track {
+    position: relative;
+    width: 120px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ct-loader-track::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -35%;
+    height: 100%;
+    width: 35%;
+    background: linear-gradient(90deg, transparent, var(--blue-accent), transparent);
+    animation: ctTrackSweep 2.2s linear infinite;
+}
+
+.ct-loader-dots {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ct-loader-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--bg-white);
+    border: 2px solid var(--border);
+    transform: scale(1);
+    animation: ctDotPulse 2.2s ease-in-out infinite;
+}
+
+.ct-loader-dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.ct-loader-dot:nth-child(2) {
+    animation-delay: .55s;
+}
+
+.ct-loader-dot:nth-child(3) {
+    animation-delay: 1.1s;
+}
+
+.ct-loader-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    animation: ctLabelFade 2.2s ease-in-out infinite;
+}
+
+@keyframes ctTrackSweep {
+    0% {
+        left: -35%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+@keyframes ctDotPulse {
+
+    0%,
+    100% {
+        background: var(--bg-white);
+        border-color: var(--border);
+        transform: scale(1);
+        box-shadow: none;
+    }
+
+    18% {
+        background: var(--blue-accent);
+        border-color: var(--blue-accent);
+        transform: scale(1.35);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, .15);
+    }
+
+    36% {
+        background: var(--blue-accent);
+        border-color: var(--blue-accent);
+        transform: scale(1);
+        box-shadow: none;
+    }
+}
+
+@keyframes ctLabelFade {
+
+    0%,
+    100% {
+        opacity: .55;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Compact variant — for tight spaces elsewhere on this page if needed */
+.ct-loader--sm .ct-loader-track {
+    width: 64px;
+    height: 3px;
+}
+
+.ct-loader--sm .ct-loader-dot {
+    width: 7px;
+    height: 7px;
+}
+
+.ct-loader--sm .ct-loader-label {
+    font-size: 11px;
+}
+
+.ct-loader--sm {
+    padding: 10px 6px;
+}
+
+/* ── Scrollbar ────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}

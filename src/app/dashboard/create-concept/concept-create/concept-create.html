@@ -1,0 +1,2186 @@
+<app-layout [showPanelToggle]="true" [(panelCollapsed)]="leftPanelCollapsed">
+  <!-- ── Left panel ── -->
+  <!-- Collapse can be triggered from the sidebar (see app-layout above)
+       or from the close (✕) button in this panel's own header. -->
+  <aside class="left-panel" [class.collapsed]="leftPanelCollapsed">
+    <!-- Expanded panel body -->
+    <ng-container *ngIf="!leftPanelCollapsed">
+      <!-- Header row -->
+      <div class="left-panel-header">
+        <h3>Latest Updates</h3>
+        <button class="panel-close-btn" (click)="leftPanelCollapsed = true" title="Close panel">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Add concept button -->
+      <button class="btn-add-concept" (click)="onAddNewConcept()">+ Add New Concept</button>
+
+      <!-- Universal search bar + assigned-to-me filter icon (same row) -->
+      <div class="lu-search-row">
+        <div class="lu-search-wrap">
+          <svg
+            class="lu-search-icon"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            class="lu-search-input"
+            type="text"
+            placeholder="Search concepts…"
+            [(ngModel)]="searchQuery"
+            [ngModelOptions]="{ standalone: true }"
+          />
+          <button
+            class="lu-search-clear"
+            *ngIf="searchQuery"
+            (click)="searchQuery = ''"
+            title="Clear search"
+          >
+            ✕
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="lu-filter-icon-btn"
+          [class.active]="assignedToMeOnly"
+          (click)="assignedToMeOnly = !assignedToMeOnly"
+          title="Assigned to me"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Loading -->
+      <div class="lu-loading" *ngIf="latestUpdatesLoading">
+        <div class="ct-loader ct-loader--sm">
+          <div class="ct-loader-track">
+            <div class="ct-loader-dots">
+              <span class="ct-loader-dot"></span>
+              <span class="ct-loader-dot"></span>
+              <span class="ct-loader-dot"></span>
+            </div>
+          </div>
+          <span class="ct-loader-label">Loading concepts…</span>
+        </div>
+      </div>
+
+      <!-- Empty state (no concepts at all) -->
+      <div class="empty-state" *ngIf="!latestUpdatesLoading && latestConcepts.length === 0">
+        <div class="empty-illustration">
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="45" r="20" fill="#C8D6F5" />
+            <ellipse cx="60" cy="90" rx="30" ry="10" fill="#E8ECFA" />
+            <circle cx="60" cy="35" r="14" fill="#7B9BD4" />
+            <rect x="50" y="49" width="20" height="28" rx="4" fill="#4A6FA5" />
+            <circle cx="80" cy="30" r="8" fill="#FFB347" />
+            <path
+              d="M76 28 L84 28 M80 24 L80 32"
+              stroke="white"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
+        <p class="empty-text">No Concepts Created Yet</p>
+      </div>
+
+      <!-- No search results -->
+      <div
+        class="lu-no-results"
+        *ngIf="!latestUpdatesLoading && latestConcepts.length > 0 && filteredConcepts.length === 0"
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#cbd5e1"
+          stroke-width="1.5"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <p *ngIf="searchQuery">
+          No concepts match<br /><strong>"{{ searchQuery }}"</strong>
+        </p>
+        <p *ngIf="!searchQuery && assignedToMeOnly">
+          No concepts are currently<br /><strong>assigned to you</strong>
+        </p>
+      </div>
+
+      <!-- Concept list -->
+      <div class="lu-list" *ngIf="!latestUpdatesLoading && filteredConcepts.length > 0">
+        <div
+          class="lu-card"
+          *ngFor="let item of filteredConcepts"
+          [class.active]="item.ConceptId === conceptId"
+          (click)="onSelectLatestConcept(item)"
+        >
+          <div class="lu-card-top">
+            <span class="lu-card-name">{{ item.ConceptName }}</span>
+            <span class="lu-badge" [ngClass]="item.statusClass">
+              {{ item.DevelopmentStatus }}
+            </span>
+          </div>
+          <div class="lu-card-bottom">
+            <span class="lu-card-id">{{ item.CurrentConceptId }}</span>
+            <span class="lu-card-updated">
+              Created: {{ item.CreatedDate | date: 'MMM d, yyyy' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </aside>
+
+  <!-- ── Main content ── -->
+  <main class="main-content">
+    <!-- pageLoading was set by the route-driven loadConcept() but never had
+         a visual before — this overlay covers just the main content area
+         while a concept's data is being fetched. -->
+    <div class="page-loading-overlay" *ngIf="pageLoading">
+      <div class="ct-loader">
+        <div class="ct-loader-track">
+          <div class="ct-loader-dots">
+            <span class="ct-loader-dot"></span>
+            <span class="ct-loader-dot"></span>
+            <span class="ct-loader-dot"></span>
+          </div>
+        </div>
+        <span class="ct-loader-label">Loading concept…</span>
+      </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span class="breadcrumb-link" (click)="navigateToConcepts()">Concepts</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">Concept Details</span>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-title-row">
+        <h1 class="page-title">{{ form.get('conceptName')?.value || 'Untitled Concept' }}</h1>
+        <span class="status-badge" [ngClass]="'status-' + developmentStatusSlug">{{
+          developmentStatusLabel
+        }}</span>
+      </div>
+      <div class="page-meta">
+        <span>Concept ID : {{ displayConceptId || conceptId }}</span>
+        <span class="meta-sep">|</span>
+        <span>Created : {{ createdDate | date: 'MMM d, yyyy' }}</span>
+        <span class="meta-sep">|</span>
+        <span>Updated : {{ updatedDate | date: 'MMM d, yyyy' }}</span>
+      </div>
+      <!-- <button class="btn-save" (click)="onSave()">Save</button> -->
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-row">
+      <!-- Draft concepts only get the Concept Development tab. The other
+           tabs stay clickable (not [disabled]) so the click still fires —
+           onTabChange() blocks the actual switch and surfaces the banner
+           below instead. A real `disabled` attribute would swallow the
+           click entirely and the user would never see why nothing happened. -->
+      <button
+        *ngFor="let tab of tabs"
+        class="tab-btn"
+        [class.active]="activeTab === tab.key"
+        [class.tab-locked]="isDraftConcept && tab.key !== 'development'"
+        [title]="
+          isDraftConcept && tab.key !== 'development'
+            ? 'Save the concept information first to access this tab'
+            : ''
+        "
+        (click)="onTabChange(tab.key)"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
+
+    <!-- Draft-lock info banner — shown when Client Approval / Supporting
+         Document is clicked while the concept is still a draft. -->
+    <div class="draft-lock-banner" *ngIf="showDraftLockBanner">
+      <span class="draft-lock-icon">i</span>
+      <span class="draft-lock-text">
+        This concept is saved as a draft. Save the Concept Information to enable Client Approval and
+        Supporting Document.
+      </span>
+      <button
+        type="button"
+        class="draft-lock-close"
+        (click)="dismissDraftLockBanner()"
+        aria-label="Dismiss"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" [formGroup]="form">
+      <!-- ─ Concept Development ─ -->
+      <ng-container *ngIf="activeTab === 'development'">
+        <section class="card">
+          <h2 class="card-title">Concept Information</h2>
+          <div class="form-grid two-col">
+            <div class="form-field">
+              <label class="field-label">Concept Name <span class="required-mark">*</span></label>
+              <input
+                type="text"
+                class="form-input"
+                formControlName="conceptName"
+                placeholder="Untitled Concept"
+                maxlength="60"
+              />
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('conceptName')?.touched && form.get('conceptName')?.hasError('required')
+                "
+              >
+                Concept Name is required.
+              </span>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Concept ID</label>
+              <input
+                type="text"
+                class="form-input readonly"
+                [value]="displayConceptId || conceptId"
+                readonly
+              />
+            </div>
+          </div>
+          <!-- Client Name / Master Concept Name / Review Type / Claim Type
+               only matter at creation time — once the concept exists, updates
+               are identified by concept_id alone, so this whole row is hidden
+               rather than shown locked/disabled. -->
+          <div class="form-grid four-col" *ngIf="!conceptId">
+            <div class="form-field">
+              <label class="field-label">Client Name <span class="required-mark">*</span></label>
+              <div
+                class="select-wrapper"
+                [class.invalid]="
+                  form.get('clientName')?.touched && form.get('clientName')?.hasError('required')
+                "
+              >
+                <select class="form-select" formControlName="clientName">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let c of clientOptions" [value]="c.client_id">
+                    {{ c.client_name }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('clientName')?.touched && form.get('clientName')?.hasError('required')
+                "
+              >
+                Client Name is required.
+              </span>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label"
+                >Master Concept Name <span class="required-mark">*</span></label
+              >
+              <div
+                class="select-wrapper"
+                [class.invalid]="
+                  form.get('masterConceptName')?.touched &&
+                  form.get('masterConceptName')?.hasError('required')
+                "
+              >
+                <select class="form-select" formControlName="masterConceptName">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let m of masterConceptOptions" [value]="m.master_id">
+                    {{ m.master_id }} - {{ m.concept_name }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('masterConceptName')?.touched &&
+                  form.get('masterConceptName')?.hasError('required')
+                "
+              >
+                Master Concept Name is required.
+              </span>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Review Type <span class="required-mark">*</span></label>
+              <div
+                class="select-wrapper"
+                [class.invalid]="
+                  form.get('reviewType')?.touched && form.get('reviewType')?.hasError('required')
+                "
+              >
+                <select class="form-select" formControlName="reviewType">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let r of reviewTypeOptions" [value]="r.review_type">
+                    {{ r.review_type }} - {{ r.description }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('reviewType')?.touched && form.get('reviewType')?.hasError('required')
+                "
+              >
+                Review Type is required.
+              </span>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Claim Type <span class="required-mark">*</span></label>
+              <div
+                class="select-wrapper"
+                [class.invalid]="
+                  form.get('claimType')?.touched && form.get('claimType')?.hasError('required')
+                "
+              >
+                <select class="form-select" formControlName="claimType">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let ct of claimTypeOptions" [value]="ct.claim_type">
+                    {{ ct.claim_type }} - {{ ct.description }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('claimType')?.touched && form.get('claimType')?.hasError('required')
+                "
+              >
+                Claim Type is required.
+              </span>
+            </div>
+          </div>
+          <div class="form-field full-width">
+            <label class="field-label">Internal Concept Description</label>
+            <textarea
+              class="form-textarea"
+              formControlName="Internalconceptdescription"
+              rows="5"
+              placeholder="This model uses advanced machine learning algorithms to predict risk factors for high-cost patient cohorts based on historical claims data and real-time clinical inputs."
+            >
+            </textarea>
+          </div>
+          <div class="form-grid three-col">
+            <div class="form-field">
+              <label class="field-label">Development Status</label>
+              <div class="select-wrapper">
+                <select
+                  class="form-select"
+                  formControlName="developmentStatus"
+                  [title]="
+                    statusLocked ? 'Your role cannot change the status from its current value' : ''
+                  "
+                >
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let d of allowedStatusOptions" [value]="d.value">
+                    {{ d.value }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Priority</label>
+              <div class="select-wrapper">
+                <select class="form-select" formControlName="priority">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let p of priorityOptions" [value]="p.value">{{ p.value }}</option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Halo Number</label>
+              <input
+                type="number"
+                class="form-input"
+                formControlName="haloNumber"
+                placeholder="Input"
+                (input)="limitToDigits($event, 'haloNumber')"
+                (wheel)="$event.preventDefault()"
+              />
+            </div>
+          </div>
+        </section>
+        <!-- ─ Development Notes ─ -->
+        <section class="card">
+          <h2 class="card-title">Development Notes</h2>
+
+          <!-- Existing notes -->
+          <div class="notes-list" #notesListRef>
+            <div class="note-item" *ngFor="let note of devNotes; let i = index; let last = last">
+              <div class="note-avatar-col">
+                <div class="note-avatar" [style.background]="note.avatarBg">
+                  {{ note.initials }}
+                </div>
+                <!-- Connecting line down to the next note's avatar — last
+                     note in the list has nothing below it to connect to. -->
+                <div class="note-connector" *ngIf="!last"></div>
+              </div>
+              <div class="note-body">
+                <div class="note-header">
+                  <div class="div" style="display: flex; gap: 5px; justify-content: space-between">
+                    <span class="note-author">{{ note.author }}</span>
+                    <span class="note-RoleName">~ {{ note.RoleName }}</span>
+                  </div>
+                  <span class="note-time">{{ note.time | date: 'MMM d, yyyy' }}</span>
+                </div>
+                <p class="note-text">{{ note.text }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add note input row -->
+          <div class="note-add-row">
+            <div class="note-avatar self-avatar">{{ currentUserInitial }}</div>
+            <input
+              type="text"
+              class="note-input"
+              [class.note-input-invalid]="noteInputInvalid"
+              placeholder="Add Development Notes..."
+              [(ngModel)]="newNoteText"
+              [ngModelOptions]="{ standalone: true }"
+              (input)="onNoteInputChange()"
+            />
+          </div>
+          <!-- Typed text above is only ever picked up and shown in the
+               list once Update is clicked and the save succeeds (see
+               submitConcept()'s pendingNote handling) — there's no
+               optimistic add on Enter anymore, so exactly one note goes
+               out, and it doesn't appear until it's actually saved. -->
+          <p class="note-pending-hint" *ngIf="newNoteText.trim()">
+            Will be saved when you click Update or Create Concept.
+          </p>
+          <p class="note-required-hint" *ngIf="noteInputInvalid">
+            A Development Note is required — describe what changed above.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Estimation &amp; Scoring</h2>
+          <div class="form-grid three-col align-end">
+            <!-- Estimated Volume -->
+            <div class="form-field">
+              <label class="field-label">
+                Estimated Volume <span class="required-mark">*</span>
+              </label>
+
+              <div
+                class="input-suffix-wrapper"
+                [class.invalid]="
+                  form.get('estimatedVolume')?.touched &&
+                  form.get('estimatedVolume')?.hasError('required')
+                "
+              >
+                <input
+                  type="number"
+                  class="form-input with-suffix"
+                  formControlName="estimatedVolume"
+                  placeholder="250000"
+                  (input)="limitToDigits($event, 'estimatedVolume')"
+                  (wheel)="$event.preventDefault()"
+                />
+                <span class="input-suffix">Units</span>
+              </div>
+
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('estimatedVolume')?.touched &&
+                  form.get('estimatedVolume')?.hasError('required')
+                "
+              >
+                Estimated Volume is required.
+              </span>
+            </div>
+
+            <!-- Estimated Dollars -->
+            <div class="form-field">
+              <label class="field-label">
+                Estimated Dollars <span class="required-mark">*</span>
+              </label>
+
+              <div
+                class="input-prefix-wrapper"
+                [class.invalid]="
+                  form.get('estimatedDollars')?.touched &&
+                  form.get('estimatedDollars')?.hasError('required')
+                "
+              >
+                <span class="input-prefix">$</span>
+                <input
+                  type="number"
+                  class="form-input with-prefix"
+                  formControlName="estimatedDollars"
+                  placeholder="1,200,000"
+                  (input)="limitToDigits($event, 'estimatedDollars')"
+                  (wheel)="$event.preventDefault()"
+                />
+              </div>
+
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('estimatedDollars')?.touched &&
+                  form.get('estimatedDollars')?.hasError('required')
+                "
+              >
+                Estimated Dollars is required.
+              </span>
+            </div>
+
+            <!-- Confidence Score -->
+            <div class="form-field">
+              <label class="field-label">Confidence Score</label>
+              <div class="toggle-group" formGroupName="confidenceScore">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="form.get('confidenceScore.value')?.value === 'low'"
+                  (click)="setConfidenceScore('low')"
+                >
+                  Low
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="form.get('confidenceScore.value')?.value === 'medium'"
+                  (click)="setConfidenceScore('medium')"
+                >
+                  Medium
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="form.get('confidenceScore.value')?.value === 'high'"
+                  (click)="setConfidenceScore('high')"
+                >
+                  High
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Ownership & Tracking</h2>
+          <div class="form-grid two-col">
+            <div class="form-field">
+              <label class="field-label">Ideation Requestor</label>
+              <div class="select-wrapper">
+                <select class="form-select" formControlName="ideationRequestor">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let u of ideationRequestorOptions" [value]="u.id">
+                    {{ u.name }}<span *ngIf="u.role_name"> - {{ u.role_name }}</span>
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Data Science Programmer</label>
+              <div class="select-wrapper">
+                <select class="form-select" formControlName="dataScienceProgrammer">
+                  <option value="" hidden>Select</option>
+                  <option *ngFor="let u of dataScienceProgrammerOptions" [value]="u.id">
+                    {{ u.name }}<span *ngIf="u.role_name"> - {{ u.role_name }}</span>
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-grid three-col">
+            <div class="form-field">
+              <label class="field-label">Previous Report ID</label>
+              <input
+                type="text"
+                class="form-input"
+                formControlName="previousReportId"
+                placeholder="REP-2025-0899"
+              />
+            </div>
+            <div class="form-field">
+              <label class="field-label">QA Schedule</label>
+              <div class="date-input-wrapper">
+                <input
+                  type="text"
+                  class="form-input date-text-input"
+                  placeholder="MM/DD/YYYY"
+                  inputmode="numeric"
+                  maxlength="10"
+                  [class.ng-invalid]="form.get('qaSchedule')?.invalid"
+                  [class.ng-touched]="form.get('qaSchedule')?.touched"
+                  [value]="getDateDisplay('qaSchedule')"
+                  (input)="onDateTextInput($event, 'qaSchedule')"
+                  (blur)="onDateTextBlur($event, 'qaSchedule')"
+                />
+                <button
+                  type="button"
+                  class="date-calendar-btn"
+                  tabindex="-1"
+                  (click)="openDatePicker(qaScheduleNative)"
+                  aria-label="Open calendar"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
+                <input
+                  #qaScheduleNative
+                  type="date"
+                  class="date-native-hidden"
+                  tabindex="-1"
+                  min="1900-01-01"
+                  max="3000-12-31"
+                  [value]="form.get('qaSchedule')?.value"
+                  (change)="onDateNativeChange($event, 'qaSchedule')"
+                />
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="field-label">Production Schedule</label>
+              <div class="date-input-wrapper">
+                <input
+                  type="text"
+                  class="form-input date-text-input"
+                  placeholder="MM/DD/YYYY"
+                  inputmode="numeric"
+                  maxlength="10"
+                  [class.ng-invalid]="form.get('productionSchedule')?.invalid"
+                  [class.ng-touched]="form.get('productionSchedule')?.touched"
+                  [value]="getDateDisplay('productionSchedule')"
+                  (input)="onDateTextInput($event, 'productionSchedule')"
+                  (blur)="onDateTextBlur($event, 'productionSchedule')"
+                />
+                <button
+                  type="button"
+                  class="date-calendar-btn"
+                  tabindex="-1"
+                  (click)="openDatePicker(productionScheduleNative)"
+                  aria-label="Open calendar"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
+                <input
+                  #productionScheduleNative
+                  type="date"
+                  class="date-native-hidden"
+                  tabindex="-1"
+                  min="1900-01-01"
+                  max="3000-12-31"
+                  [value]="form.get('productionSchedule')?.value"
+                  (change)="onDateNativeChange($event, 'productionSchedule')"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─ Attachments ─ -->
+        <section class="card attachments-card">
+          <div class="sd-header attach-header">
+            <h2 class="card-title sd-card-title">Attachments</h2>
+            <button
+              type="button"
+              class="btn-download-all"
+              (click)="downloadAllAttachments()"
+              [disabled]="!hasAnyAttachments"
+              title="Download all attachment files"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download All
+            </button>
+          </div>
+
+          <div class="attach-grid">
+            <!-- SPECS -->
+            <div class="attach-col">
+              <span class="attach-label">SPECS <span class="required-mark">*</span></span>
+              <div
+                class="attach-dropzone"
+                [class.dropzone-disabled]="!canManageAttachments('specs')"
+                (dragover)="onAttachDragOver($event)"
+                (drop)="onAttachDrop($event, 'specs')"
+                (click)="triggerAttachUpload('specs')"
+              >
+                <input
+                  #specsInput
+                  type="file"
+                  multiple
+                  hidden
+                  (change)="onAttachSelected($event, 'specs')"
+                />
+                <div class="attach-upload-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
+                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <button
+                  type="button"
+                  class="btn-browse"
+                  [disabled]="!canManageAttachments('specs')"
+                  (click)="$event.stopPropagation(); triggerAttachUpload('specs')"
+                >
+                  Browse File
+                </button>
+              </div>
+              <!-- No files state -->
+              <div class="attach-no-files" *ngIf="attachments['specs'].length === 0">
+                No Files Uploaded
+              </div>
+              <!-- Uploaded files for SPECS -->
+              <div class="attach-file-item" *ngFor="let f of attachments['specs']">
+                <div class="attach-file-icon pdf">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ef4444"
+                    stroke-width="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <div class="attach-file-info">
+                  <span class="attach-file-name">{{ f.name }}</span>
+                  <div class="attach-progress-row">
+                    <div class="attach-progress-bar">
+                      <div
+                        class="attach-progress-fill uploading"
+                        [style.width]="f.progress + '%'"
+                      ></div>
+                    </div>
+                    <span class="attach-progress-label">{{
+                      f.progress < 100 ? 'Uploading...' : 'Completed'
+                    }}</span>
+                  </div>
+                </div>
+                <button
+                  class="attach-view-btn"
+                  (click)="viewAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'View document'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-download-btn"
+                  (click)="downloadAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'Download file'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-remove"
+                  *ngIf="canManageAttachments('specs')"
+                  (click)="removeAttachment('specs', f)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- TABLE -->
+            <div class="attach-col">
+              <span class="attach-label">TABLE <span class="optional-mark">(Optional)</span></span>
+              <div
+                class="attach-dropzone"
+                [class.dropzone-disabled]="!canManageAttachments('table')"
+                (dragover)="onAttachDragOver($event)"
+                (drop)="onAttachDrop($event, 'table')"
+                (click)="triggerAttachUpload('table')"
+              >
+                <input
+                  #tableInput
+                  type="file"
+                  multiple
+                  hidden
+                  (change)="onAttachSelected($event, 'table')"
+                />
+                <div class="attach-upload-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
+                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <button
+                  type="button"
+                  class="btn-browse"
+                  [disabled]="!canManageAttachments('table')"
+                  (click)="$event.stopPropagation(); triggerAttachUpload('table')"
+                >
+                  Browse File
+                </button>
+              </div>
+              <!-- No files state -->
+              <div class="attach-no-files" *ngIf="attachments['table'].length === 0">
+                No Files Uploaded
+              </div>
+              <div class="attach-file-item" *ngFor="let f of attachments['table']">
+                <div class="attach-file-icon pdf">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ef4444"
+                    stroke-width="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <div class="attach-file-info">
+                  <span class="attach-file-name">{{ f.name }}</span>
+                  <div class="attach-progress-row">
+                    <div class="attach-progress-bar">
+                      <div
+                        class="attach-progress-fill uploading"
+                        [style.width]="f.progress + '%'"
+                      ></div>
+                    </div>
+                    <span class="attach-progress-label">{{
+                      f.progress < 100 ? 'Uploading...' : 'Completed'
+                    }}</span>
+                  </div>
+                </div>
+                <button
+                  class="attach-view-btn"
+                  (click)="viewAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'View document'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-download-btn"
+                  (click)="downloadAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'Download file'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-remove"
+                  *ngIf="canManageAttachments('table')"
+                  (click)="removeAttachment('table', f)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- OTHER -->
+            <div class="attach-col">
+              <span class="attach-label">OTHER <span class="optional-mark">(Optional)</span></span>
+              <div
+                class="attach-dropzone"
+                [class.dropzone-disabled]="!canManageAttachments('other')"
+                (dragover)="onAttachDragOver($event)"
+                (drop)="onAttachDrop($event, 'other')"
+                (click)="triggerAttachUpload('other')"
+              >
+                <input
+                  #otherInput
+                  type="file"
+                  multiple
+                  hidden
+                  (change)="onAttachSelected($event, 'other')"
+                />
+                <div class="attach-upload-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
+                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <button
+                  type="button"
+                  class="btn-browse"
+                  [disabled]="!canManageAttachments('other')"
+                  (click)="$event.stopPropagation(); triggerAttachUpload('other')"
+                >
+                  Browse File
+                </button>
+              </div>
+              <!-- No files state -->
+              <div class="attach-no-files" *ngIf="attachments['other'].length === 0">
+                No Files Uploaded
+              </div>
+              <div class="attach-file-item" *ngFor="let f of attachments['other']">
+                <div class="attach-file-icon pdf">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ef4444"
+                    stroke-width="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <div class="attach-file-info">
+                  <span class="attach-file-name">{{ f.name }}</span>
+                  <div class="attach-progress-row">
+                    <div class="attach-progress-bar">
+                      <div
+                        class="attach-progress-fill uploading"
+                        [style.width]="f.progress + '%'"
+                      ></div>
+                    </div>
+                    <span class="attach-progress-label">{{
+                      f.progress < 100 ? 'Uploading...' : 'Completed'
+                    }}</span>
+                  </div>
+                </div>
+                <button
+                  class="attach-view-btn"
+                  (click)="viewAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'View document'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-download-btn"
+                  (click)="downloadAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'Download file'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-remove"
+                  *ngIf="canManageAttachments('other')"
+                  (click)="removeAttachment('other', f)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- /attach-grid -->
+
+          <!-- Submit button -->
+          <div class="attach-submit-row">
+            <button
+              class="btn-draft"
+              *ngIf="!developmentCompleted"
+              (click)="onSaveAsDraft()"
+              [disabled]="loading || isAttachmentUploading"
+              [title]="isAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+              type="button"
+            >
+              <span *ngIf="!loading">Save as Draft</span>
+              <span *ngIf="loading">Saving...</span>
+            </button>
+            <button
+              class="btn-submit"
+              (click)="onSubmit()"
+              [disabled]="loading || isAttachmentUploading"
+              [title]="isAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+            >
+              <span *ngIf="!loading">{{ developmentCompleted ? 'Update' : 'Create Concept' }}</span>
+              <span *ngIf="loading">Uploading...</span>
+            </button>
+          </div>
+        </section>
+      </ng-container>
+
+      <!-- ─ Client Approval ─ -->
+      <ng-container *ngIf="activeTab === 'approval'">
+        <!-- <section class="card">
+          <h2 class="card-title">Client Approval</h2>
+          <div class="pending-state">
+            <div class="pending-icon">⏳</div>
+            <p>Client approval is pending. Complete Concept Development first.</p>
+          </div>
+        </section> -->
+        <section class="card">
+          <h2 class="card-title">Client Facing Information</h2>
+
+          <div class="form-grid two-col">
+            <div class="form-field">
+              <label class="field-label">Concept Name <span class="required-mark">*</span></label>
+              <input
+                type="text"
+                class="form-input"
+                formControlName="clientConceptName"
+                placeholder="Concept Name"
+                (blur)="onClientConceptNameBlur()"
+                maxlength="60"
+              />
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('clientConceptName')?.touched &&
+                  form.get('clientConceptName')?.hasError('required')
+                "
+              >
+                Concept Name is required.
+              </span>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label">Concept ID</label>
+              <input
+                type="text"
+                class="form-input readonly"
+                [value]="'Concept ID : ' + (displayConceptId || conceptId)"
+                readonly
+              />
+            </div>
+          </div>
+
+          <div class="form-field full-width">
+            <label class="field-label"
+              >Client Concept Description <span class="required-mark">*</span></label
+            >
+            <textarea
+              class="form-textarea"
+              rows="5"
+              formControlName="clientConceptDescription"
+              placeholder="Enter client facing concept description"
+            >
+            </textarea>
+            <span
+              class="field-error"
+              *ngIf="
+                form.get('clientConceptDescription')?.touched &&
+                form.get('clientConceptDescription')?.hasError('required')
+              "
+            >
+              Client Concept Description is required.
+            </span>
+          </div>
+        </section>
+
+        <!-- Approval Details -->
+        <section class="card">
+          <h2 class="card-title">Approval Details</h2>
+
+          <div class="form-grid two-col">
+            <div class="form-field">
+              <label class="field-label"
+                >Client Approval Status <span class="required-mark">*</span></label
+              >
+
+              <div
+                class="select-wrapper"
+                [class.invalid]="
+                  form.get('clientApprovalStatus')?.touched &&
+                  form.get('clientApprovalStatus')?.hasError('required')
+                "
+              >
+                <select class="form-select" formControlName="clientApprovalStatus">
+                  <option value="" hidden>Select Status</option>
+                  <option *ngFor="let c of clientApprovalstatusOptions" [value]="c.value">
+                    {{ c.value }}
+                  </option>
+                </select>
+                <span class="select-arrow">▾</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('clientApprovalStatus')?.touched &&
+                  form.get('clientApprovalStatus')?.hasError('required')
+                "
+              >
+                Client Approval Status is required.
+              </span>
+            </div>
+
+            <div class="form-field">
+              <label class="field-label"
+                >Submitted To Client On <span class="required-mark">*</span></label
+              >
+              <div class="date-input-wrapper">
+                <input
+                  type="text"
+                  class="form-input date-text-input"
+                  placeholder="MM/DD/YYYY"
+                  inputmode="numeric"
+                  maxlength="10"
+                  [class.ng-invalid]="form.get('submittedToClientOn')?.invalid"
+                  [class.ng-touched]="form.get('submittedToClientOn')?.touched"
+                  [value]="getDateDisplay('submittedToClientOn')"
+                  (input)="onDateTextInput($event, 'submittedToClientOn')"
+                  (blur)="onDateTextBlur($event, 'submittedToClientOn')"
+                />
+                <button
+                  type="button"
+                  class="date-calendar-btn"
+                  tabindex="-1"
+                  (click)="openDatePicker(submittedToClientOnNative)"
+                  aria-label="Open calendar"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
+                <input
+                  #submittedToClientOnNative
+                  type="date"
+                  class="date-native-hidden"
+                  tabindex="-1"
+                  [min]="minSelectableDate"
+                  max="3000-12-31"
+                  [value]="form.get('submittedToClientOn')?.value"
+                  (change)="onDateNativeChange($event, 'submittedToClientOn')"
+                />
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('submittedToClientOn')?.touched &&
+                  form.get('submittedToClientOn')?.hasError('required')
+                "
+              >
+                Submitted To Client On is required.
+              </span>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('submittedToClientOn')?.touched &&
+                  form.get('submittedToClientOn')?.hasError('pastDate')
+                "
+              >
+                Submitted To Client On cannot be in the past.
+              </span>
+            </div>
+          </div>
+
+          <div class="form-grid two-col">
+            <div class="form-field">
+              <label class="field-label"
+                >Estimated Volume <span class="required-mark">*</span></label
+              >
+              <div class="input-suffix-wrapper">
+                <input
+                  type="number"
+                  class="form-input with-suffix"
+                  formControlName="estimatedVolume"
+                  placeholder="250000"
+                  (input)="limitToDigits($event, 'estimatedVolume')"
+                  (wheel)="$event.preventDefault()"
+                />
+                <span class="input-suffix">Units</span>
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('estimatedVolume')?.touched &&
+                  form.get('estimatedVolume')?.hasError('required')
+                "
+              >
+                Estimated Volume is required.
+              </span>
+            </div>
+            <div class="form-field">
+              <label class="field-label"
+                >Estimated Dollars <span class="required-mark">*</span></label
+              >
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">$</span>
+                <input
+                  type="text"
+                  class="form-input with-prefix"
+                  formControlName="estimatedDollars"
+                  placeholder="1,200,000"
+                  (input)="limitToDigits($event, 'estimatedDollars')"
+                />
+              </div>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('estimatedDollars')?.touched &&
+                  form.get('estimatedDollars')?.hasError('required')
+                "
+              >
+                Estimated Dollars is required.
+              </span>
+            </div>
+          </div>
+
+          <div class="form-field full-width">
+            <label class="field-label"
+              >Client Review & Approval Notes <span class="required-mark">*</span></label
+            >
+            <textarea
+              class="form-textarea"
+              rows="5"
+              formControlName="clientApprovalNotes"
+              placeholder="Enter client review comments and approval notes"
+            >
+            </textarea>
+            <span
+              class="field-error"
+              *ngIf="
+                form.get('clientApprovalNotes')?.touched &&
+                form.get('clientApprovalNotes')?.hasError('required')
+              "
+            >
+              Client Review &amp; Approval Notes is required.
+            </span>
+          </div>
+        </section>
+
+        <!-- ─ Attachments (Client Approval) ─ -->
+        <section class="card attachments-card">
+          <div class="sd-header attach-header">
+            <h2 class="card-title sd-card-title">Attachments</h2>
+            <button
+              type="button"
+              class="btn-download-all"
+              (click)="downloadAllApprovalAttachments()"
+              [disabled]="!hasAnyApprovalAttachments"
+              title="Download all attachment files"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download All
+            </button>
+          </div>
+
+          <div class="attach-grid attach-grid--single">
+            <div class="attach-col">
+              <span class="attach-label"
+                >CLIENT APPROVAL DOCUMENT <span class="optional-mark">(Optional)</span></span
+              >
+              <div
+                class="attach-dropzone"
+                [class.dropzone-disabled]="!canManageAttachments('approval')"
+                (dragover)="onAttachDragOver($event)"
+                (drop)="onAttachDrop($event, 'approval')"
+                (click)="triggerAttachUpload('approval')"
+              >
+                <input
+                  #approvalInput
+                  type="file"
+                  multiple
+                  hidden
+                  (change)="onAttachSelected($event, 'approval')"
+                />
+                <div class="attach-upload-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </div>
+                <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
+                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <button
+                  type="button"
+                  class="btn-browse"
+                  [disabled]="!canManageAttachments('approval')"
+                  (click)="$event.stopPropagation(); triggerAttachUpload('approval')"
+                >
+                  Browse File
+                </button>
+              </div>
+              <!-- No files state -->
+              <div class="attach-no-files" *ngIf="attachments['approval'].length === 0">
+                No Files Uploaded
+              </div>
+              <!-- Uploaded files for CLIENT APPROVAL -->
+              <div class="attach-file-item" *ngFor="let f of attachments['approval']">
+                <div class="attach-file-icon pdf">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ef4444"
+                    stroke-width="2"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                </div>
+                <div class="attach-file-info">
+                  <span class="attach-file-name">{{ f.name }}</span>
+                  <div class="attach-progress-row">
+                    <div class="attach-progress-bar">
+                      <div
+                        class="attach-progress-fill uploading"
+                        [style.width]="f.progress + '%'"
+                      ></div>
+                    </div>
+                    <span class="attach-progress-label">{{
+                      f.progress < 100 ? 'Uploading...' : 'Completed'
+                    }}</span>
+                  </div>
+                </div>
+                <button
+                  class="attach-view-btn"
+                  (click)="viewAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'View document'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-download-btn"
+                  (click)="downloadAttachment(f)"
+                  [disabled]="f.progress < 100"
+                  [title]="f.progress < 100 ? 'Wait for upload to finish' : 'Download file'"
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+                <button
+                  class="attach-remove"
+                  *ngIf="canManageAttachments('approval')"
+                  (click)="removeAttachment('approval', f)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- /attach-grid -->
+
+          <div class="approval-submit-row">
+            <button
+              class="btn-submit"
+              (click)="onApprovalSubmit()"
+              [disabled]="loading || isApprovalAttachmentUploading"
+              [title]="isApprovalAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+            >
+              <span *ngIf="!loading">{{ clientApprovalCompleted ? 'Update' : 'Submit' }}</span>
+              <span *ngIf="loading">Submitting...</span>
+            </button>
+          </div>
+        </section>
+      </ng-container>
+
+      <!-- ─ Supporting Documents ─ -->
+      <ng-container *ngIf="activeTab === 'documents'">
+        <!-- Hidden file input triggered per-card -->
+        <input #docFileInput type="file" hidden (change)="onGlobalDocFileSelected($event)" />
+
+        <section class="card sd-section">
+          <!-- Section header -->
+          <div class="sd-header">
+            <div>
+              <h2 class="card-title sd-card-title">Supporting Documents</h2>
+              <p class="sd-subtitle">Manage external links and supporting materials</p>
+            </div>
+            <div class="sd-header-actions">
+              <button
+                type="button"
+                class="btn-download-all"
+                (click)="downloadAllSupportingDocs()"
+                [disabled]="!hasAnySupportingDocs"
+                title="Download all supporting documents"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Download All
+              </button>
+              <button
+                class="btn-add-doc"
+                [disabled]="!canManageSupportingDocs"
+                (click)="onAddSupportingDoc()"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Document
+              </button>
+            </div>
+          </div>
+
+          <!-- Empty state -->
+          <div class="sd-empty" *ngIf="supportingDocs.length === 0">
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="13" x2="12" y2="17" />
+              <line x1="10" y1="15" x2="14" y2="15" />
+            </svg>
+            <p>No supporting documents yet. Click <strong>Add Document</strong> to begin.</p>
+          </div>
+
+          <!-- 2-column card grid -->
+          <div class="sd-grid" *ngIf="supportingDocs.length > 0">
+            <div class="sd-card" *ngFor="let doc of supportingDocs; let i = index">
+              <!-- Card label row -->
+              <div class="sd-card-label-row">
+                <span class="sd-card-label">Supporting Document {{ i + 1 }}</span>
+              </div>
+
+              <!-- Card body -->
+              <div class="sd-card-body">
+                <!-- ── ALWAYS VISIBLE: file icon + Document Name input + trash ── -->
+                <div class="sd-file-row">
+                  <!-- File icon: grey upload when empty, purple doc when has file -->
+                  <div
+                    class="sd-file-icon-btn"
+                    [class.has-file]="!!doc.file"
+                    [class.dropzone-disabled]="!canManageSupportingDocs"
+                    (click)="triggerDocFileInput(i)"
+                    [title]="doc.file ? 'Change file' : 'Click to upload'"
+                  >
+                    <!-- No file: upload arrow -->
+                    <svg
+                      *ngIf="!doc.file"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#94a3b8"
+                      stroke-width="1.8"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <!-- Has file but still uploading: purple doc -->
+                    <svg
+                      *ngIf="doc.file && doc.uploadProgress < 100"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#6366f1"
+                      stroke-width="1.8"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <!-- Upload done: green doc with checkmark -->
+                    <svg
+                      *ngIf="doc.file && doc.uploadProgress >= 100"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#22c55e"
+                      stroke-width="1.8"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </div>
+
+                  <!-- Document Name — instantly filled from filename on upload -->
+                  <input
+                    class="sd-name-input"
+                    type="text"
+                    [(ngModel)]="doc.name"
+                    placeholder="Document Name"
+                    [title]="doc.name"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+
+                  <!-- Trash -->
+                  <!-- <button class="sd-delete-btn" (click)="removeSupportingDoc(i)" title="Delete"> -->
+                  <button
+                    class="sd-delete-clear-btn"
+                    *ngIf="canManageSupportingDocs"
+                    (click)="clearDocFile($event, i)"
+                    title="Clear file"
+                  >
+                    Clear
+                    <!-- <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg> -->
+                    <!-- <a class="sd-change-btn">Clear</a> -->
+                  </button>
+                </div>
+
+                <!-- ── Progress bar: visible while uploading ── -->
+                <div class="sd-progress-wrap" *ngIf="doc.file && doc.uploadProgress < 100">
+                  <div class="sd-progress-bar">
+                    <div class="sd-progress-fill" [style.width]="doc.uploadProgress + '%'"></div>
+                  </div>
+                  <span class="sd-progress-pct">{{ doc.uploadProgress }}%</span>
+                </div>
+
+                <!-- ── Success banner: visible once upload complete ── -->
+                <div class="sd-success-banner" *ngIf="doc.file && doc.uploadProgress >= 100">
+                  <div class="sd-success-icon">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      stroke-width="3"
+                      stroke-linecap="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <span class="sd-success-text">{{
+                    doc.restored ? 'Uploaded' : 'Uploaded successfully'
+                  }}</span>
+                  <button
+                    class="sd-change-btn"
+                    *ngIf="canManageSupportingDocs"
+                    (click)="triggerDocFileInput(i)"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                <!-- Source URL row -->
+                <div class="sd-meta-row">
+                  <span class="sd-meta-icon">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#6366f1"
+                      stroke-width="2"
+                    >
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  </span>
+                  <input
+                    class="sd-meta-input"
+                    type="text"
+                    [(ngModel)]="doc.sourceurl"
+                    placeholder="www.example.com"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+                </div>
+
+                <!-- PDF location row + View + Delete buttons -->
+                <div class="sd-meta-row sd-pdf-row">
+                  <span class="sd-meta-icon">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#64748b"
+                      stroke-width="2"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                  </span>
+                  <input
+                    class="sd-meta-input"
+                    type="text"
+                    [(ngModel)]="doc.pdfLocation"
+                    placeholder="/internal/docs/filename.pdf"
+                    [ngModelOptions]="{ standalone: true }"
+                  />
+
+                  <!-- View button -->
+                  <button
+                    class="sd-view-btn"
+                    (click)="viewDoc(doc)"
+                    [disabled]="!doc.downloadUrl && (!doc.file || doc.uploadProgress < 100)"
+                    [title]="
+                      doc.downloadUrl
+                        ? 'View document'
+                        : !doc.file
+                          ? 'Upload a file to enable preview'
+                          : doc.uploadProgress < 100
+                            ? 'Wait for the upload to finish before viewing'
+                            : 'View document'
+                    "
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    View
+                  </button>
+
+                  <!-- Download button -->
+                  <button
+                    class="sd-download-btn"
+                    (click)="downloadDoc(doc)"
+                    [disabled]="
+                      !doc.downloadUrl &&
+                      !doc.pdfLocation &&
+                      !doc.sourceurl &&
+                      (!doc.file || doc.uploadProgress < 100)
+                    "
+                    [title]="
+                      doc.file && doc.uploadProgress < 100
+                        ? 'Wait for the upload to finish before downloading'
+                        : 'Download document'
+                    "
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download
+                  </button>
+
+                  <!-- Delete button -->
+                  <button
+                    class="sd-del-btn"
+                    *ngIf="canManageSupportingDocs"
+                    (click)="removeSupportingDoc(i)"
+                    title="Delete"
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <!-- /sd-card-body -->
+            </div>
+            <!-- /sd-card -->
+          </div>
+          <!-- /sd-grid -->
+
+          <!-- Submit -->
+          <div class="sd-submit-row">
+            <button
+              class="btn-submit"
+              (click)="onDocSubmit()"
+              [disabled]="loading || isSupportingDocUploading"
+              [title]="isSupportingDocUploading ? 'Wait for files to finish uploading' : ''"
+            >
+              <span *ngIf="!loading">{{ supportingDocumentsCompleted ? 'Update' : 'Submit' }}</span>
+              <span *ngIf="loading">Submitting...</span>
+            </button>
+          </div>
+        </section>
+      </ng-container>
+    </div>
+  </main>
+
+  <!-- ── Right Panel ── -->
+  <aside class="right-panel">
+    <div class="status-card">
+      <h3 class="status-title">Concept Status</h3>
+
+      <ul class="status-steps">
+        <!-- Concept Development -->
+        <li class="status-step">
+          <span
+            class="step-indicator"
+            [ngClass]="developmentCompleted ? 'completed' : 'not-started'"
+          >
+            {{ developmentCompleted ? '✓' : '-' }}
+          </span>
+
+          <div class="step-info">
+            <span class="step-name">Concept Development</span>
+            <span class="step-sub">
+              {{ developmentCompleted ? 'Concept Created' : 'Not Created' }}
+            </span>
+          </div>
+        </li>
+
+        <!-- Client Approval -->
+        <li class="status-step">
+          <span
+            class="step-indicator"
+            [ngClass]="clientApprovalCompleted ? 'completed' : 'not-started'"
+          >
+            {{ clientApprovalCompleted ? '✓' : '-' }}
+          </span>
+
+          <div class="step-info">
+            <span class="step-name">Client Approval</span>
+            <span class="step-sub">
+              {{ clientApprovalCompleted ? 'concept Approved' : 'Not Approved' }}
+            </span>
+          </div>
+        </li>
+
+        <!-- Supporting Document -->
+        <li class="status-step">
+          <span
+            class="step-indicator"
+            [ngClass]="supportingDocumentsCompleted ? 'completed' : 'not-started'"
+          >
+            {{ supportingDocumentsCompleted ? '✓' : '-' }}
+          </span>
+
+          <div class="step-info">
+            <span class="step-name">Supporting Document</span>
+            <span class="step-sub">
+              {{ supportingDocumentsCompleted ? 'Submitted' : 'Not Submitted' }}
+            </span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- ownership Card right side panel -->
+    <!-- <div class="ownership-card">
+      <div class="ownership-header">
+        <h3 class="ownership-title">Ownership</h3>
+        <button
+          *ngIf="activeTab === 'development'"
+          class="btn-add-owner"
+          (click)="addOwnership()"
+          title="Add Ownership"
+        >
+          +
+        </button>
+      </div>
+
+      <div class="owner-dropdown" *ngIf="showOwnerDropdown && activeTab === 'development'">
+        <div class="owner-search-wrap">
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="2"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            class="owner-search-input"
+            type="text"
+            placeholder="Search name or department…"
+            [(ngModel)]="ownerSearch"
+            [ngModelOptions]="{ standalone: true }"
+          />
+        </div>
+
+        <div class="owner-candidate-list">
+          <div
+            class="owner-candidate-item"
+            *ngFor="let c of filteredCandidates"
+            (click)="selectAndAddOwner(c)"
+          >
+            <div class="owner-cand-avatar" [style.background]="c.avatarColor">{{ c.initials }}</div>
+            <div class="owner-cand-info">
+              <span class="owner-cand-name">{{ c.name }}</span>
+              <span class="owner-cand-dept">{{ c.department }}</span>
+            </div>
+          </div>
+          <div class="owner-no-results" *ngIf="filteredCandidates.length === 0">No users found</div>
+        </div>
+      </div>
+
+      <div class="ownership-empty" *ngIf="owners.length === 0 && !showOwnerDropdown">
+        <p>Have Not Added Any Ownership Yet</p>
+      </div>
+
+      <div class="owner-list" *ngIf="owners.length > 0">
+        <div class="owner-item" *ngFor="let owner of owners">
+          <div class="owner-avatar" [style.background]="owner.avatarColor">
+            {{ owner.initials }}
+          </div>
+          <div class="owner-details">
+            <span class="owner-name">{{ owner.name }}</span>
+            <span class="owner-dept">{{ owner.department }}</span>
+          </div>
+          <button
+            class="owner-remove-btn"
+            *ngIf="activeTab === 'development'"
+            (click)="removeOwner(owner.id)"
+            title="Remove"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div> -->
+  </aside>
+
+  <!-- ── Doc Viewer Popup (Word/Excel/PDF) — placed as a top-level sibling
+       of left-panel / main-content / right-panel, NOT nested inside
+       <main>, so it isn't subject to .main-content's overflow:hidden or
+       any flex-child clipping. Available regardless of active tab. ──── -->
+  <div class="viewer-backdrop" *ngIf="docViewerVisible" (click)="closeDocViewer()">
+    <div class="viewer-panel" (click)="$event.stopPropagation()">
+      <!-- Toolbar -->
+      <div class="viewer-toolbar">
+        <div class="viewer-title">
+          <span *ngIf="isWordExt(docViewerFileExt)">📄</span>
+          <span *ngIf="isExcelExt(docViewerFileExt)">📊</span>
+          <span *ngIf="isPdfExt(docViewerFileExt)">📕</span>
+          <strong>{{ docViewerFileName }}</strong>
+          <span
+            class="viewer-ext-badge"
+            [ngClass]="{
+              'word-badge': isWordExt(docViewerFileExt),
+              'excel-badge': isExcelExt(docViewerFileExt),
+              'pdf-badge': isPdfExt(docViewerFileExt),
+            }"
+          >
+            .{{ docViewerFileExt }}
+          </span>
+        </div>
+        <button type="button" class="btn-close" (click)="closeDocViewer()">✕ Close</button>
+      </div>
+
+      <!-- Excel sheet tabs -->
+      <div class="sheet-tabs" *ngIf="isExcelExt(docViewerFileExt) && docSheets.length > 1">
+        <button
+          type="button"
+          class="sheet-tab"
+          *ngFor="let sheet of docSheets; let i = index"
+          [class.active]="docActiveSheet === i"
+          (click)="setDocActiveSheet(i)"
+        >
+          {{ sheet.sheetName }}
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="viewer-content" [class.pdf-content]="isPdfExt(docViewerFileExt)">
+        <div class="viewer-loading" *ngIf="docViewerLoading">
+          <div class="ct-loader ct-loader--sm">
+            <div class="ct-loader-track">
+              <div class="ct-loader-dots">
+                <span class="ct-loader-dot"></span>
+                <span class="ct-loader-dot"></span>
+                <span class="ct-loader-dot"></span>
+              </div>
+            </div>
+            <span class="ct-loader-label">Loading preview…</span>
+          </div>
+        </div>
+
+        <!-- Word document -->
+        <div
+          class="word-body"
+          *ngIf="!docViewerLoading && isWordExt(docViewerFileExt)"
+          [innerHTML]="docWordHtml"
+        ></div>
+
+        <!-- Excel table -->
+        <div
+          class="excel-body"
+          *ngIf="!docViewerLoading && isExcelExt(docViewerFileExt) && docSheets.length"
+        >
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="row-num">#</th>
+                <th *ngFor="let h of docSheets[docActiveSheet].headers">{{ h }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of docSheets[docActiveSheet].rows; let i = index">
+                <td class="row-num">{{ i + 1 }}</td>
+                <td *ngFor="let cell of row">{{ cell }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PDF inline preview -->
+        <iframe
+          *ngIf="!docViewerLoading && isPdfExt(docViewerFileExt) && docPdfUrl"
+          class="pdf-frame"
+          [src]="docPdfUrl"
+          title="PDF preview"
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</app-layout>

@@ -1,0 +1,31 @@
+.unauthorized-container {
+    text-align: center;
+    padding: 50px;
+    background-color: #fff3f3;
+    border-radius: 10px;
+    margin: 50px auto;
+    max-width: 500px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.unauthorized-container h1 {
+    font-size: 30px;
+    color: #d9534f;
+}
+
+.unauthorized-container p {
+    font-size: 15px;
+}
+
+.btn-home {
+    background-color: #0275d8;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-home:hover {
+    background-color: #025aa5;
+}
