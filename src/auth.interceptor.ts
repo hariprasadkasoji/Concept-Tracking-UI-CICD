@@ -1,4 +1,3 @@
-
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
@@ -9,7 +8,14 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   const router = inject(Router);
   const toastr = inject(ToastrService);
   const token = sessionStorage.getItem('authToken');
-  const isAuthRequest = req.url.includes('/api/clients');
+
+  // /api/clients: pre-existing exemption.
+  // /select-role: called BEFORE any real session token exists - the user
+  // is mid-login, proven only by the short-lived pending_token sent in
+  // the request body, not as a Bearer header. Without this exemption the
+  // "no token -> session expired" branch below fires on every multi-role
+  // login and blocks it before it reaches the backend.
+  const isAuthRequest = req.url.includes('/api/clients') || req.url.includes('/select-role');
   if (isAuthRequest) {
     return next(req);
   }

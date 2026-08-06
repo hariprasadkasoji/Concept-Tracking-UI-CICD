@@ -1,10 +1,11 @@
 {
   "name": "concept-tracking",
-  "version": "0.0.0",
+  "version": "1.0.9",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "node scripts/update-version.js && ng build",
+    "build:prod": "node scripts/update-version.js && ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -31,6 +32,7 @@
     "@angular/material": "^20.2.14",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@angular/service-worker": "^20.3.25",
     "@popperjs/core": "^2.11.8",
     "ag-grid-angular": "^35.0.0",
     "bootstrap": "^5.3.8",

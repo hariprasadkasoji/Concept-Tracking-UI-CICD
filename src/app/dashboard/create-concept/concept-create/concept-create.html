@@ -25,7 +25,14 @@
       </div>
 
       <!-- Add concept button -->
-      <button class="btn-add-concept" (click)="onAddNewConcept()">+ Add New Concept</button>
+      <button
+        class="btn-add-concept"
+        (click)="onAddNewConcept()"
+        [disabled]="!canCreateConcept"
+        [title]="!canCreateConcept ? 'You do not have permission to create a new concept.' : ''"
+      >
+        + Add New Concept
+      </button>
 
       <!-- Universal search bar + assigned-to-me filter icon (same row) -->
       <div class="lu-search-row">
@@ -141,17 +148,30 @@
       </div>
 
       <!-- Concept list -->
-      <div class="lu-list" *ngIf="!latestUpdatesLoading && filteredConcepts.length > 0">
+      <div class="lu-list" [hidden]="latestUpdatesLoading || filteredConcepts.length === 0">
         <div
           class="lu-card"
-          *ngFor="let item of filteredConcepts"
-          [class.active]="item.ConceptId === conceptId"
+          *ngFor="let item of filteredConcepts; trackBy: trackByConceptId"
+          [class.active]="isActiveConcept(item)"
+          [attr.data-concept-id]="item.ConceptId"
+          [attr.data-current-concept-id]="item.CurrentConceptId"
           (click)="onSelectLatestConcept(item)"
         >
           <div class="lu-card-top">
-            <span class="lu-card-name">{{ item.ConceptName }}</span>
-            <span class="lu-badge" [ngClass]="item.statusClass">
-              {{ item.DevelopmentStatus }}
+            <span class="lu-card-name" [title]="item.ConceptName">{{ item.ConceptName }}</span>
+            <span class="lu-badge-group">
+              <!-- Development Status Badge -->
+              <span class="lu-badge" [ngClass]="item.statusClass">
+                {{ item.DevelopmentStatus }}
+              </span>
+              <!-- Hourglass icon shown only on draft cards -->
+              <img
+                *ngIf="item.isDraft"
+                class="lu-hourglass-icon"
+                src="Images/hourglass.png"
+                alt="Draft"
+                title="Draft"
+              />
             </span>
           </div>
           <div class="lu-card-bottom">
@@ -193,10 +213,18 @@
     <!-- Page Header -->
     <div class="page-header">
       <div class="page-title-row">
-        <h1 class="page-title">{{ form.get('conceptName')?.value || 'Untitled Concept' }}</h1>
-        <span class="status-badge" [ngClass]="'status-' + developmentStatusSlug">{{
-          developmentStatusLabel
-        }}</span>
+        <h1 class="page-title">
+          {{ form.get('conceptName')?.value || 'Untitled Concept' }}
+        </h1>
+
+        <span class="status-badge" [ngClass]="'status-' + developmentStatusSlug">
+          {{ developmentStatusLabel }}
+        </span>
+
+        <span class="page-draft-badge" *ngIf="isDraftConcept">
+          <img class="lu-hourglass-icon" src="Images/hourglass.png" alt="Draft" title="Draft" />
+          Draft
+        </span>
       </div>
       <div class="page-meta">
         <span>Concept ID : {{ displayConceptId || conceptId }}</span>
@@ -219,10 +247,10 @@
         *ngFor="let tab of tabs"
         class="tab-btn"
         [class.active]="activeTab === tab.key"
-        [class.tab-locked]="isDraftConcept && tab.key !== 'development'"
+        [class.tab-locked]="(!conceptId || isDraftConcept) && tab.key !== 'development'"
         [title]="
-          isDraftConcept && tab.key !== 'development'
-            ? 'Save the concept information first to access this tab'
+          (!conceptId || isDraftConcept) && tab.key !== 'development'
+            ? 'Save the Concept Information first to access this tab'
             : ''
         "
         (click)="onTabChange(tab.key)"
@@ -233,24 +261,25 @@
 
     <!-- Draft-lock info banner — shown when Client Approval / Supporting
          Document is clicked while the concept is still a draft. -->
-    <div class="draft-lock-banner" *ngIf="showDraftLockBanner">
-      <span class="draft-lock-icon">i</span>
-      <span class="draft-lock-text">
-        This concept is saved as a draft. Save the Concept Information to enable Client Approval and
-        Supporting Document.
-      </span>
-      <button
-        type="button"
-        class="draft-lock-close"
-        (click)="dismissDraftLockBanner()"
-        aria-label="Dismiss"
-      >
-        ✕
-      </button>
-    </div>
+    @if (showDraftLockBanner) {
+      <div class="draft-lock-banner">
+        <span class="draft-lock-icon">i</span>
+        <span class="draft-lock-text">
+          {{ draftLockMessage }}
+        </span>
+        <button
+          type="button"
+          class="draft-lock-close"
+          (click)="dismissDraftLockBanner()"
+          aria-label="Dismiss"
+        >
+          ✕
+        </button>
+      </div>
+    }
 
     <!-- Tab Content -->
-    <div class="tab-content" [formGroup]="form">
+    <div class="tab-content" #tabContentRef [formGroup]="form">
       <!-- ─ Concept Development ─ -->
       <ng-container *ngIf="activeTab === 'development'">
         <section class="card">
@@ -263,7 +292,7 @@
                 class="form-input"
                 formControlName="conceptName"
                 placeholder="Untitled Concept"
-                maxlength="60"
+                maxlength="50"
               />
               <span
                 class="field-error"
@@ -300,7 +329,7 @@
                 <select class="form-select" formControlName="clientName">
                   <option value="" hidden>Select</option>
                   <option *ngFor="let c of clientOptions" [value]="c.client_id">
-                    {{ c.client_name }}
+                    {{ c.client_id }} - {{ c.client_name }}
                   </option>
                 </select>
                 <span class="select-arrow">▾</span>
@@ -403,7 +432,7 @@
               class="form-textarea"
               formControlName="Internalconceptdescription"
               rows="5"
-              placeholder="This model uses advanced machine learning algorithms to predict risk factors for high-cost patient cohorts based on historical claims data and real-time clinical inputs."
+              placeholder="Fill the Concept Description..."
             >
             </textarea>
           </div>
@@ -443,7 +472,7 @@
                 class="form-input"
                 formControlName="haloNumber"
                 placeholder="Input"
-                (input)="limitToDigits($event, 'haloNumber')"
+                (input)="limitToDigitsNoZero($event, 'haloNumber')"
                 (wheel)="$event.preventDefault()"
               />
             </div>
@@ -488,6 +517,8 @@
               [(ngModel)]="newNoteText"
               [ngModelOptions]="{ standalone: true }"
               (input)="onNoteInputChange()"
+              [disabled]="!canEdit"
+              [title]="!canEdit ? 'You do not have permission to add development notes.' : ''"
             />
           </div>
           <!-- Typed text above is only ever picked up and shown in the
@@ -514,10 +545,7 @@
 
               <div
                 class="input-suffix-wrapper"
-                [class.invalid]="
-                  form.get('estimatedVolume')?.touched &&
-                  form.get('estimatedVolume')?.hasError('required')
-                "
+                [class.invalid]="developmentSubmitAttempted && form.get('estimatedVolume')?.invalid"
               >
                 <input
                   type="number"
@@ -533,11 +561,16 @@
               <span
                 class="field-error"
                 *ngIf="
-                  form.get('estimatedVolume')?.touched &&
-                  form.get('estimatedVolume')?.hasError('required')
+                  developmentSubmitAttempted && form.get('estimatedVolume')?.hasError('required')
                 "
               >
                 Estimated Volume is required.
+              </span>
+              <span
+                class="field-error"
+                *ngIf="developmentSubmitAttempted && form.get('estimatedVolume')?.hasError('min')"
+              >
+                Estimated Volume must be greater than 0.
               </span>
             </div>
 
@@ -550,8 +583,7 @@
               <div
                 class="input-prefix-wrapper"
                 [class.invalid]="
-                  form.get('estimatedDollars')?.touched &&
-                  form.get('estimatedDollars')?.hasError('required')
+                  developmentSubmitAttempted && form.get('estimatedDollars')?.invalid
                 "
               >
                 <span class="input-prefix">$</span>
@@ -568,11 +600,16 @@
               <span
                 class="field-error"
                 *ngIf="
-                  form.get('estimatedDollars')?.touched &&
-                  form.get('estimatedDollars')?.hasError('required')
+                  developmentSubmitAttempted && form.get('estimatedDollars')?.hasError('required')
                 "
               >
                 Estimated Dollars is required.
+              </span>
+              <span
+                class="field-error"
+                *ngIf="developmentSubmitAttempted && form.get('estimatedDollars')?.hasError('min')"
+              >
+                Estimated Dollars must be greater than 0.
               </span>
             </div>
 
@@ -584,6 +621,12 @@
                   type="button"
                   class="toggle-btn"
                   [class.active]="form.get('confidenceScore.value')?.value === 'low'"
+                  [disabled]="!canEditConfidenceScore"
+                  [title]="
+                    !canEditConfidenceScore
+                      ? 'You do not have permission to change the Confidence Score.'
+                      : ''
+                  "
                   (click)="setConfidenceScore('low')"
                 >
                   Low
@@ -592,6 +635,12 @@
                   type="button"
                   class="toggle-btn"
                   [class.active]="form.get('confidenceScore.value')?.value === 'medium'"
+                  [disabled]="!canEditConfidenceScore"
+                  [title]="
+                    !canEditConfidenceScore
+                      ? 'You do not have permission to change the Confidence Score.'
+                      : ''
+                  "
                   (click)="setConfidenceScore('medium')"
                 >
                   Medium
@@ -600,6 +649,12 @@
                   type="button"
                   class="toggle-btn"
                   [class.active]="form.get('confidenceScore.value')?.value === 'high'"
+                  [disabled]="!canEditConfidenceScore"
+                  [title]="
+                    !canEditConfidenceScore
+                      ? 'You do not have permission to change the Confidence Score.'
+                      : ''
+                  "
                   (click)="setConfidenceScore('high')"
                 >
                   High
@@ -617,7 +672,7 @@
               <div class="select-wrapper">
                 <select class="form-select" formControlName="ideationRequestor">
                   <option value="" hidden>Select</option>
-                  <option *ngFor="let u of ideationRequestorOptions" [value]="u.id">
+                  <option *ngFor="let u of ideationRequestorDropdownOptions" [value]="u.id">
                     {{ u.name }}<span *ngIf="u.role_name"> - {{ u.role_name }}</span>
                   </option>
                 </select>
@@ -629,7 +684,7 @@
               <div class="select-wrapper">
                 <select class="form-select" formControlName="dataScienceProgrammer">
                   <option value="" hidden>Select</option>
-                  <option *ngFor="let u of dataScienceProgrammerOptions" [value]="u.id">
+                  <option *ngFor="let u of dataScienceProgrammerDropdownOptions" [value]="u.id">
                     {{ u.name }}<span *ngIf="u.role_name"> - {{ u.role_name }}</span>
                   </option>
                 </select>
@@ -644,7 +699,9 @@
                 type="text"
                 class="form-input"
                 formControlName="previousReportId"
-                placeholder="REP-2025-0899"
+                placeholder="REP20250899"
+                maxlength="50"
+                (input)="restrictSpecialChars($event, 'previousReportId')"
               />
             </div>
             <div class="form-field">
@@ -659,6 +716,7 @@
                   [class.ng-invalid]="form.get('qaSchedule')?.invalid"
                   [class.ng-touched]="form.get('qaSchedule')?.touched"
                   [value]="getDateDisplay('qaSchedule')"
+                  [disabled]="form.get('qaSchedule')?.disabled"
                   (input)="onDateTextInput($event, 'qaSchedule')"
                   (blur)="onDateTextBlur($event, 'qaSchedule')"
                 />
@@ -666,6 +724,7 @@
                   type="button"
                   class="date-calendar-btn"
                   tabindex="-1"
+                  [disabled]="form.get('qaSchedule')?.disabled"
                   (click)="openDatePicker(qaScheduleNative)"
                   aria-label="Open calendar"
                 >
@@ -688,9 +747,10 @@
                   type="date"
                   class="date-native-hidden"
                   tabindex="-1"
-                  min="1900-01-01"
+                  [min]="minSelectableDate"
                   max="3000-12-31"
                   [value]="form.get('qaSchedule')?.value"
+                  [disabled]="form.get('qaSchedule')?.disabled"
                   (change)="onDateNativeChange($event, 'qaSchedule')"
                 />
               </div>
@@ -707,6 +767,7 @@
                   [class.ng-invalid]="form.get('productionSchedule')?.invalid"
                   [class.ng-touched]="form.get('productionSchedule')?.touched"
                   [value]="getDateDisplay('productionSchedule')"
+                  [disabled]="form.get('productionSchedule')?.disabled"
                   (input)="onDateTextInput($event, 'productionSchedule')"
                   (blur)="onDateTextBlur($event, 'productionSchedule')"
                 />
@@ -714,6 +775,7 @@
                   type="button"
                   class="date-calendar-btn"
                   tabindex="-1"
+                  [disabled]="form.get('productionSchedule')?.disabled"
                   (click)="openDatePicker(productionScheduleNative)"
                   aria-label="Open calendar"
                 >
@@ -736,9 +798,10 @@
                   type="date"
                   class="date-native-hidden"
                   tabindex="-1"
-                  min="1900-01-01"
+                  [min]="minSelectableDate"
                   max="3000-12-31"
                   [value]="form.get('productionSchedule')?.value"
+                  [disabled]="form.get('productionSchedule')?.disabled"
                   (change)="onDateNativeChange($event, 'productionSchedule')"
                 />
               </div>
@@ -787,6 +850,7 @@
                 <input
                   #specsInput
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
                   multiple
                   hidden
                   (change)="onAttachSelected($event, 'specs')"
@@ -806,7 +870,7 @@
                   </svg>
                 </div>
                 <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
-                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <p class="attach-types">xlsx, PDF and docx formats</p>
                 <button
                   type="button"
                   class="btn-browse"
@@ -836,8 +900,8 @@
                   </svg>
                 </div>
                 <div class="attach-file-info">
-                  <span class="attach-file-name">{{ f.name }}</span>
-                  <div class="attach-progress-row">
+                  <span class="attach-file-name" [title]="f.name">{{ f.name }}</span>
+                  <div class="attach-progress-row" *ngIf="f.progress < 100">
                     <div class="attach-progress-bar">
                       <div
                         class="attach-progress-fill uploading"
@@ -909,6 +973,7 @@
                 <input
                   #tableInput
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
                   multiple
                   hidden
                   (change)="onAttachSelected($event, 'table')"
@@ -928,7 +993,7 @@
                   </svg>
                 </div>
                 <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
-                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <p class="attach-types">xlsx, PDF and docx formats</p>
                 <button
                   type="button"
                   class="btn-browse"
@@ -957,8 +1022,10 @@
                   </svg>
                 </div>
                 <div class="attach-file-info">
-                  <span class="attach-file-name">{{ f.name }}</span>
-                  <div class="attach-progress-row">
+                  <span class="attach-file-name" [title]="f.name">
+                    {{ f.name }}
+                  </span>
+                  <div class="attach-progress-row" *ngIf="f.progress < 100">
                     <div class="attach-progress-bar">
                       <div
                         class="attach-progress-fill uploading"
@@ -1030,6 +1097,7 @@
                 <input
                   #otherInput
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
                   multiple
                   hidden
                   (change)="onAttachSelected($event, 'other')"
@@ -1049,7 +1117,7 @@
                   </svg>
                 </div>
                 <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
-                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <p class="attach-types">xlsx, PDF and docx formats</p>
                 <button
                   type="button"
                   class="btn-browse"
@@ -1078,8 +1146,10 @@
                   </svg>
                 </div>
                 <div class="attach-file-info">
-                  <span class="attach-file-name">{{ f.name }}</span>
-                  <div class="attach-progress-row">
+                  <span class="attach-file-name" [title]="f.name">
+                    {{ f.name }}
+                  </span>
+                  <div class="attach-progress-row" *ngIf="f.progress < 100">
                     <div class="attach-progress-bar">
                       <div
                         class="attach-progress-fill uploading"
@@ -1146,18 +1216,30 @@
               class="btn-draft"
               *ngIf="!developmentCompleted"
               (click)="onSaveAsDraft()"
-              [disabled]="loading || isAttachmentUploading"
-              [title]="isAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+              [disabled]="savingDraft || loading || isAttachmentUploading || !canEdit"
+              [title]="
+                !canEdit
+                  ? 'You do not have permission to save drafts.'
+                  : isAttachmentUploading
+                    ? 'Wait for files to finish uploading'
+                    : ''
+              "
               type="button"
             >
-              <span *ngIf="!loading">Save as Draft</span>
-              <span *ngIf="loading">Saving...</span>
+              <span *ngIf="!savingDraft">Save as Draft</span>
+              <span *ngIf="savingDraft">Saving...</span>
             </button>
             <button
               class="btn-submit"
               (click)="onSubmit()"
-              [disabled]="loading || isAttachmentUploading"
-              [title]="isAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+              [disabled]="loading || savingDraft || isAttachmentUploading || !canEdit"
+              [title]="
+                !canEdit
+                  ? 'You do not have permission to submit concepts.'
+                  : isAttachmentUploading
+                    ? 'Wait for files to finish uploading'
+                    : ''
+              "
             >
               <span *ngIf="!loading">{{ developmentCompleted ? 'Update' : 'Create Concept' }}</span>
               <span *ngIf="loading">Uploading...</span>
@@ -1187,7 +1269,7 @@
                 formControlName="clientConceptName"
                 placeholder="Concept Name"
                 (blur)="onClientConceptNameBlur()"
-                maxlength="60"
+                maxlength="50"
               />
               <span
                 class="field-error"
@@ -1284,6 +1366,7 @@
                   [class.ng-invalid]="form.get('submittedToClientOn')?.invalid"
                   [class.ng-touched]="form.get('submittedToClientOn')?.touched"
                   [value]="getDateDisplay('submittedToClientOn')"
+                  [disabled]="form.get('submittedToClientOn')?.disabled"
                   (input)="onDateTextInput($event, 'submittedToClientOn')"
                   (blur)="onDateTextBlur($event, 'submittedToClientOn')"
                 />
@@ -1291,6 +1374,7 @@
                   type="button"
                   class="date-calendar-btn"
                   tabindex="-1"
+                  [disabled]="form.get('submittedToClientOn')?.disabled"
                   (click)="openDatePicker(submittedToClientOnNative)"
                   aria-label="Open calendar"
                 >
@@ -1316,6 +1400,7 @@
                   [min]="minSelectableDate"
                   max="3000-12-31"
                   [value]="form.get('submittedToClientOn')?.value"
+                  [disabled]="form.get('submittedToClientOn')?.disabled"
                   (change)="onDateNativeChange($event, 'submittedToClientOn')"
                 />
               </div>
@@ -1337,6 +1422,15 @@
               >
                 Submitted To Client On cannot be in the past.
               </span>
+              <span
+                class="field-error"
+                *ngIf="
+                  form.get('submittedToClientOn')?.touched &&
+                  form.get('submittedToClientOn')?.hasError('invalidDateRange')
+                "
+              >
+                Please enter a valid date (MM/DD/YYYY).
+              </span>
             </div>
           </div>
 
@@ -1345,13 +1439,18 @@
               <label class="field-label"
                 >Estimated Volume <span class="required-mark">*</span></label
               >
-              <div class="input-suffix-wrapper">
+              <div
+                class="input-suffix-wrapper"
+                [class.invalid]="approvalSubmitAttempted && form.get('estimatedVolume')?.invalid"
+              >
                 <input
                   type="number"
                   class="form-input with-suffix"
-                  formControlName="estimatedVolume"
+                  [class.readonly]="canDSEdit"
+                  formControlName="clientEstimatedVolume"
                   placeholder="250000"
-                  (input)="limitToDigits($event, 'estimatedVolume')"
+                  [readonly]="canDSEdit"
+                  (input)="limitToDigits($event, 'clientEstimatedVolume')"
                   (wheel)="$event.preventDefault()"
                 />
                 <span class="input-suffix">Units</span>
@@ -1359,35 +1458,57 @@
               <span
                 class="field-error"
                 *ngIf="
-                  form.get('estimatedVolume')?.touched &&
-                  form.get('estimatedVolume')?.hasError('required')
+                  approvalSubmitAttempted && form.get('clientEstimatedVolume')?.hasError('required')
                 "
               >
                 Estimated Volume is required.
+              </span>
+              <span
+                class="field-error"
+                *ngIf="
+                  approvalSubmitAttempted && form.get('clientEstimatedVolume')?.hasError('min')
+                "
+              >
+                Estimated Volume must be greater than 0.
               </span>
             </div>
             <div class="form-field">
               <label class="field-label"
                 >Estimated Dollars <span class="required-mark">*</span></label
               >
-              <div class="input-prefix-wrapper">
+              <div
+                class="input-prefix-wrapper"
+                [class.invalid]="
+                  approvalSubmitAttempted && form.get('clientEstimatedDollars')?.invalid
+                "
+              >
                 <span class="input-prefix">$</span>
                 <input
                   type="text"
                   class="form-input with-prefix"
-                  formControlName="estimatedDollars"
+                  [class.readonly]="canDSEdit"
+                  formControlName="clientEstimatedDollars"
                   placeholder="1,200,000"
-                  (input)="limitToDigits($event, 'estimatedDollars')"
+                  [readonly]="canDSEdit"
+                  (input)="limitToDigits($event, 'clientEstimatedDollars')"
                 />
               </div>
               <span
                 class="field-error"
                 *ngIf="
-                  form.get('estimatedDollars')?.touched &&
-                  form.get('estimatedDollars')?.hasError('required')
+                  approvalSubmitAttempted &&
+                  form.get('clientEstimatedDollars')?.hasError('required')
                 "
               >
                 Estimated Dollars is required.
+              </span>
+              <span
+                class="field-error"
+                *ngIf="
+                  approvalSubmitAttempted && form.get('clientEstimatedDollars')?.hasError('min')
+                "
+              >
+                Estimated Dollars must be greater than 0.
               </span>
             </div>
           </div>
@@ -1457,6 +1578,7 @@
                 <input
                   #approvalInput
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
                   multiple
                   hidden
                   (change)="onAttachSelected($event, 'approval')"
@@ -1476,7 +1598,7 @@
                   </svg>
                 </div>
                 <p class="attach-hint">Choose a file or drag &amp; drop it here</p>
-                <p class="attach-types">JPEG, PNG, PDF, PDN, and MP4 formats, up to 50MB</p>
+                <p class="attach-types">xlsx, PDF and docx formats</p>
                 <button
                   type="button"
                   class="btn-browse"
@@ -1506,8 +1628,10 @@
                   </svg>
                 </div>
                 <div class="attach-file-info">
-                  <span class="attach-file-name">{{ f.name }}</span>
-                  <div class="attach-progress-row">
+                  <span class="attach-file-name" [title]="f.name">
+                    {{ f.name }}
+                  </span>
+                  <div class="attach-progress-row" *ngIf="f.progress < 100">
                     <div class="attach-progress-bar">
                       <div
                         class="attach-progress-fill uploading"
@@ -1572,8 +1696,14 @@
             <button
               class="btn-submit"
               (click)="onApprovalSubmit()"
-              [disabled]="loading || isApprovalAttachmentUploading"
-              [title]="isApprovalAttachmentUploading ? 'Wait for files to finish uploading' : ''"
+              [disabled]="loading || isApprovalAttachmentUploading || !canSubmitApproval"
+              [title]="
+                !canSubmitApproval
+                  ? 'You do not have permission to submit client approvals.'
+                  : isApprovalAttachmentUploading
+                    ? 'Wait for files to finish uploading'
+                    : ''
+              "
             >
               <span *ngIf="!loading">{{ clientApprovalCompleted ? 'Update' : 'Submit' }}</span>
               <span *ngIf="loading">Submitting...</span>
@@ -1585,7 +1715,13 @@
       <!-- ─ Supporting Documents ─ -->
       <ng-container *ngIf="activeTab === 'documents'">
         <!-- Hidden file input triggered per-card -->
-        <input #docFileInput type="file" hidden (change)="onGlobalDocFileSelected($event)" />
+        <input
+          #docFileInput
+          type="file"
+          accept=".pdf,.doc,.docx,.xls,.xlsx"
+          hidden
+          (change)="onGlobalDocFileSelected($event)"
+        />
 
         <section class="card sd-section">
           <!-- Section header -->
@@ -1717,7 +1853,11 @@
                     </svg>
                   </div>
 
-                  <!-- Document Name — instantly filled from filename on upload -->
+                  <!-- Document Name — instantly filled from filename on upload.
+                       Read-only: this must always mirror the attached
+                       file's name, never a manually-typed value (a link,
+                       or anything else) — the Source URL field below is
+                       the correct place for a link. -->
                   <input
                     class="sd-name-input"
                     type="text"
@@ -1725,6 +1865,7 @@
                     placeholder="Document Name"
                     [title]="doc.name"
                     [ngModelOptions]="{ standalone: true }"
+                    readonly
                   />
 
                   <!-- Trash -->
@@ -1762,7 +1903,12 @@
                 </div>
 
                 <!-- ── Success banner: visible once upload complete ── -->
-                <div class="sd-success-banner" *ngIf="doc.file && doc.uploadProgress >= 100">
+                <div
+                  class="sd-success-banner"
+                  *ngIf="
+                    doc.file && doc.uploadProgress >= 100 && doc.successBannerVisible !== false
+                  "
+                >
                   <div class="sd-success-icon">
                     <svg
                       width="12"
@@ -1777,7 +1923,7 @@
                     </svg>
                   </div>
                   <span class="sd-success-text">{{
-                    doc.restored ? 'Uploaded' : 'Uploaded successfully'
+                    doc.restored ? 'Uploaded' : 'File Added successfully'
                   }}</span>
                   <button
                     class="sd-change-btn"
@@ -1806,9 +1952,12 @@
                   <input
                     class="sd-meta-input"
                     type="text"
+                    maxlength="200"
                     [(ngModel)]="doc.sourceurl"
                     placeholder="www.example.com"
                     [ngModelOptions]="{ standalone: true }"
+                    [class.readonly]="!canManageSupportingDocs"
+                    [readonly]="!canManageSupportingDocs"
                   />
                 </div>
 
@@ -1834,20 +1983,24 @@
                     [(ngModel)]="doc.pdfLocation"
                     placeholder="/internal/docs/filename.pdf"
                     [ngModelOptions]="{ standalone: true }"
+                    [class.readonly]="!canManageSupportingDocs"
+                    [readonly]="!canManageSupportingDocs"
                   />
 
                   <!-- View button -->
                   <button
                     class="sd-view-btn"
                     (click)="viewDoc(doc)"
-                    [disabled]="!doc.downloadUrl && (!doc.file || doc.uploadProgress < 100)"
+                    [disabled]="
+                      (doc.file && doc.uploadProgress < 100) || (!doc.file && !doc.downloadUrl)
+                    "
                     [title]="
-                      doc.downloadUrl
-                        ? 'View document'
-                        : !doc.file
-                          ? 'Upload a file to enable preview'
-                          : doc.uploadProgress < 100
-                            ? 'Wait for the upload to finish before viewing'
+                      doc.file && doc.uploadProgress < 100
+                        ? 'Wait for the upload to finish before viewing'
+                        : doc.downloadUrl
+                          ? 'View document'
+                          : !doc.file
+                            ? 'Upload a file to enable preview'
                             : 'View document'
                     "
                   >
@@ -1870,10 +2023,7 @@
                     class="sd-download-btn"
                     (click)="downloadDoc(doc)"
                     [disabled]="
-                      !doc.downloadUrl &&
-                      !doc.pdfLocation &&
-                      !doc.sourceurl &&
-                      (!doc.file || doc.uploadProgress < 100)
+                      (doc.file && doc.uploadProgress < 100) || (!doc.file && !doc.downloadUrl)
                     "
                     [title]="
                       doc.file && doc.uploadProgress < 100
@@ -1901,7 +2051,12 @@
                     class="sd-del-btn"
                     *ngIf="canManageSupportingDocs"
                     (click)="removeSupportingDoc(i)"
-                    title="Delete"
+                    [disabled]="doc.file && doc.uploadProgress < 100"
+                    [title]="
+                      doc.file && doc.uploadProgress < 100
+                        ? 'Wait for the upload to finish before deleting'
+                        : 'Delete'
+                    "
                   >
                     <svg
                       width="13"
@@ -1931,8 +2086,14 @@
             <button
               class="btn-submit"
               (click)="onDocSubmit()"
-              [disabled]="loading || isSupportingDocUploading"
-              [title]="isSupportingDocUploading ? 'Wait for files to finish uploading' : ''"
+              [disabled]="loading || isSupportingDocUploading || !canManageSupportingDocs"
+              [title]="
+                !canManageSupportingDocs
+                  ? 'You do not have permission to submit supporting documents.'
+                  : isSupportingDocUploading
+                    ? 'Wait for files to finish uploading'
+                    : ''
+              "
             >
               <span *ngIf="!loading">{{ supportingDocumentsCompleted ? 'Update' : 'Submit' }}</span>
               <span *ngIf="loading">Submitting...</span>

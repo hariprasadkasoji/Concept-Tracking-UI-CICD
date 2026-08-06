@@ -1,0 +1,232 @@
+<app-layout [hideMainNav]="true" [showAdminLink]="true">
+  <div class="config-page">
+    <!-- Left: category list -->
+    <nav class="config-nav" aria-label="Configuration categories">
+      <button
+        *ngFor="let category of categories"
+        type="button"
+        class="config-nav__item"
+        [class.config-nav__item--active]="activeCategory() === category.key"
+        (click)="selectCategory(category.key)"
+      >
+        <span>{{ category.label }}</span>
+        <svg class="config-nav__chevron" width="18" height="18" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M6 4l4 4-4 4"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </nav>
+
+    <!-- Right: content panel -->
+    <section class="config-panel">
+      <header class="config-panel__header">
+        <h1>Master Data Management</h1>
+        <p>Manage and configure master data for the application</p>
+      </header>
+
+      <div class="config-card">
+        <div class="config-card__header">
+          <h2>{{ activeCategoryLabel }}</h2>
+          <button type="button" class="btn-add" (click)="openAddModal()">Add New</button>
+        </div>
+
+        <div class="config-card__body">
+          <p class="config-status" *ngIf="isLoading()">Loading…</p>
+
+          <ng-container *ngIf="!isLoading()">
+            <div class="config-grid" *ngIf="activeItems.length; else emptyState">
+              <div class="config-item" *ngFor="let item of activeItems; trackBy: itemKey">
+                <div class="config-item__text">
+                  <span class="config-item__title">
+                    <span class="config-item__code" *ngIf="item.code" [title]="item.code">{{
+                      item.code
+                    }}</span>
+                    <span class="config-item__name" [title]="item.name">{{ item.name }}</span>
+                  </span>
+                  <span
+                    class="config-item__desc"
+                    *ngIf="item.description"
+                    [title]="item.description"
+                    >{{ item.description }}</span
+                  >
+                </div>
+                <button
+                  type="button"
+                  class="config-item__remove"
+                  (click)="requestRemoveItem(item)"
+                  [attr.aria-label]="'Remove ' + item.name"
+                >
+                  <img
+                    src="/Images/bin.png"
+                    alt=""
+                    class="config-item__remove-icon"
+                    height="20"
+                    width="20"
+                  />
+                </button>
+              </div>
+            </div>
+
+            <ng-template #emptyState>
+              <div class="config-empty">
+                <p>No {{ activeCategoryLabel.toLowerCase() }} entries yet.</p>
+                <button type="button" class="btn-add" (click)="openAddModal()">
+                  Add the first one
+                </button>
+              </div>
+            </ng-template>
+          </ng-container>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Add configuration modal -->
+  <div class="modal-overlay" *ngIf="isAddModalOpen()" (click)="closeAddModal()">
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-config-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-card__header">
+        <h3 id="add-config-title">Create {{ activeCategoryLabel }}</h3>
+        <button
+          type="button"
+          class="modal-card__close"
+          aria-label="Close"
+          (click)="closeAddModal()"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3 3l10 10M13 3L3 13"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-card__body">
+        <ng-container *ngIf="activeCategoryMeta.type === 'coded'">
+          <label class="modal-field-label" for="new-config-code">
+            Code
+            <span class="modal-field-hint" *ngIf="activeCategoryMeta.codeLength">
+              ({{ activeCategoryMeta.codeLength }} char{{
+                activeCategoryMeta.codeLength === 1 ? '' : 's'
+              }},
+              {{
+                activeCategoryMeta.key === 'masterConceptName' ? 'numbers only' : 'letters only'
+              }})
+            </span>
+          </label>
+          <input
+            id="new-config-code"
+            type="text"
+            class="modal-field-input"
+            [placeholder]="activeCategoryMeta.codePlaceholder || 'e.g. CLI'"
+            [maxlength]="activeCategoryMeta.codeLength || null"
+            [(ngModel)]="newItemCode"
+            (input)="onCodeInput($event)"
+            autocomplete="off"
+          />
+          <div class="modal-field-spacer"></div>
+        </ng-container>
+
+        <label class="modal-field-label" for="new-config-name">
+          Name
+          <span class="modal-field-hint" *ngIf="activeCategoryMeta.nameMaxLength">
+            (max {{ activeCategoryMeta.nameMaxLength }} chars)
+          </span>
+        </label>
+        <input
+          id="new-config-name"
+          type="text"
+          class="modal-field-input"
+          placeholder="Untitled"
+          [maxlength]="activeCategoryMeta.nameMaxLength || null"
+          [(ngModel)]="newItemName"
+          autocomplete="off"
+          (keyup.enter)="saveNewItem()"
+        />
+
+        <ng-container *ngFor="let field of activeCategoryMeta.extraFields">
+          <div class="modal-field-spacer"></div>
+          <label class="modal-field-label" [for]="'new-config-' + field.key">{{
+            field.label
+          }}</label>
+          <input
+            [id]="'new-config-' + field.key"
+            type="text"
+            class="modal-field-input"
+            [placeholder]="field.placeholder || field.label"
+            [maxlength]="field.maxLength || null"
+            [(ngModel)]="newItemExtra[field.key]"
+            [name]="field.key"
+            autocomplete="off"
+          />
+        </ng-container>
+      </div>
+
+      <button type="button" class="modal-save-btn" [disabled]="isSaving()" (click)="saveNewItem()">
+        {{ isSaving() ? 'Saving…' : 'Add ' + activeCategoryLabel }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Remove / deactivate configuration confirm modal -->
+  <div class="modal-overlay" *ngIf="pendingRemoveItem()" (click)="cancelRemoveItem()">
+    <div
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="remove-config-title"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-card__header">
+        <h3 id="remove-config-title">Delete configuration</h3>
+        <button
+          type="button"
+          class="modal-card__close"
+          aria-label="Close"
+          (click)="cancelRemoveItem()"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3 3l10 10M13 3L3 13"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-card__body">
+        <p class="modal-confirm-text">
+          Are you sure you want to delete
+          <strong>{{ pendingRemoveItem()?.name }}</strong> ? This can't be undone.
+        </p>
+      </div>
+
+      <div class="modal-confirm-actions">
+        <button type="button" class="modal-cancel-btn" (click)="cancelRemoveItem()">Cancel</button>
+        <button
+          type="button"
+          class="modal-delete-btn"
+          [disabled]="isRemoving()"
+          (click)="confirmRemoveItem()"
+        >
+          {{ isRemoving() ? 'Deleting…' : 'Delete' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</app-layout>

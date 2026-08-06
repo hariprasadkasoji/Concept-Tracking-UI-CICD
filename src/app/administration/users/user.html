@@ -1,0 +1,243 @@
+<app-layout [hideMainNav]="true" [showAdminLink]="true">
+  <div class="admin-page">
+    <!-- Main panel: header + table -->
+    <section class="admin-main">
+      <header class="admin-header">
+        <div>
+          <h1 class="admin-title">System Administration</h1>
+          <p class="admin-subtitle">Manage users</p>
+        </div>
+        <button class="btn-primary" (click)="onAddConfiguration()">Add New User</button>
+      </header>
+
+      <div class="admin-grid-wrapper">
+        @if (initialLoad) {
+          <div class="admin-empty-state">
+            <div class="ct-loader">
+              <div class="ct-loader-track">
+                <div class="ct-loader-dots">
+                  <span class="ct-loader-dot"></span>
+                  <span class="ct-loader-dot"></span>
+                  <span class="ct-loader-dot"></span>
+                </div>
+              </div>
+              <span class="ct-loader-label">Loading users…</span>
+            </div>
+          </div>
+        }
+
+        <ag-grid-angular
+          class="admin-grid"
+          style="width: 100%; height: 100%"
+          [columnDefs]="columnDefs"
+          [defaultColDef]="defaultColDef"
+          [rowModelType]="rowModelType"
+          [cacheBlockSize]="PAGE_SIZE"
+          [cacheOverflowSize]="cacheOverflowSize"
+          [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+          [infiniteInitialRowCount]="infiniteInitialRowCount"
+          [maxBlocksInCache]="maxBlocksInCache"
+          [pagination]="pagination"
+          [paginationPageSize]="PAGE_SIZE"
+          [paginationPageSizeSelector]="paginationPageSizeSelector"
+          [overlayNoRowsTemplate]="overlayNoRowsTemplate"
+          [overlayLoadingTemplate]="overlayLoadingTemplate"
+          (gridReady)="onGridReady($event)"
+          (filterChanged)="onFilterChanged()"
+          (paginationChanged)="onPaginationChanged()"
+          (cellClicked)="onGridCellClicked($event)"
+        >
+        </ag-grid-angular>
+      </div>
+    </section>
+
+    <!-- Side panel: existing roles -->
+    <aside>
+      <div class="admin-roles-panel">
+        <div class="roles-title-row">
+          <h2 class="roles-title">Existing Roles</h2>
+          <button class="btn-add-role" (click)="onAddRole()" aria-label="Add role" title="Add role">
+            +
+          </button>
+        </div>
+        <ul class="roles-list">
+          <li *ngFor="let role of roles">
+            <span class="role-name-group">
+              <span class="role-dot"></span>{{ role.role_name }}
+            </span>
+            <button
+              class="role-delete-btn"
+              (click)="onDeleteRoleClick(role)"
+              aria-label="Delete role"
+              title="Delete role"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+              </svg>
+            </button>
+          </li>
+          <li *ngIf="!loadingRoles && roles.length === 0" class="roles-empty">No roles yet.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ========================================
+       MODAL: Add/Modify Configuration, Add Role
+  ======================================== -->
+  <div class="modal-overlay" *ngIf="isModalOpen" (click)="closeModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          {{
+            modalMode === 'configuration'
+              ? editingUser
+                ? 'Modify User'
+                : 'Adding User'
+              : 'Add New Role'
+          }}
+        </h2>
+        <button class="modal-close" (click)="closeModal()" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Configuration form (Add New Configuration / Modify) -->
+      <form
+        class="modal-body"
+        *ngIf="modalMode === 'configuration'"
+        (ngSubmit)="onSubmitConfig()"
+        autocomplete="off"
+      >
+        <div class="form-row">
+          <div class="form-field">
+            <label for="userName">Email Address</label>
+            <input
+              id="userName"
+              type="email"
+              name="userName"
+              placeholder="user@example.com"
+              [(ngModel)]="configForm.userName"
+              #userNameCtrl="ngModel"
+              pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+              [disabled]="!!editingUser"
+              [title]="configForm.userName"
+            />
+          </div>
+          <div class="form-field">
+            <label for="name">Full Name</label>
+            <input
+              id="name"
+              type="text"
+              name="name"
+              placeholder="Untitled"
+              [(ngModel)]="configForm.name"
+              [title]="configForm.name"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="active">Status</label>
+            <select id="active" name="active" [(ngModel)]="configForm.active">
+              <option [ngValue]="true">Active</option>
+              <option [ngValue]="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field form-field-full">
+          <label>Roles</label>
+          <div class="role-checkbox-list">
+            <label class="role-checkbox" *ngFor="let role of roles">
+              <input
+                type="checkbox"
+                [checked]="isRoleChecked(role.id)"
+                (change)="toggleConfigRole(role.id, $any($event.target).checked)"
+              />
+              {{ role.role_name }}
+            </label>
+            <span class="admin-empty-inline" *ngIf="roles.length === 0"
+              >No roles yet — add one first.</span
+            >
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="submitting">
+          {{ submitting ? 'Saving…' : 'Submit' }}
+        </button>
+      </form>
+
+      <!-- Role form (Add New Role) -->
+      <form
+        class="modal-body"
+        *ngIf="modalMode === 'role'"
+        (ngSubmit)="onSubmitRole()"
+        autocomplete="off"
+      >
+        <div class="form-field form-field-full">
+          <label for="roleName">Role Name</label>
+          <input
+            id="roleName"
+            type="text"
+            name="roleName"
+            placeholder="Untitled"
+            [(ngModel)]="roleForm.roleName"
+          />
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="submitting">
+          {{ submitting ? 'Saving…' : 'Submit' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================
+       CONFIRM: Delete Role
+  ======================================== -->
+  <div class="modal-overlay" *ngIf="roleToDelete" (click)="cancelDeleteRole()">
+    <div class="modal-box modal-box-confirm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Delete role</h2>
+        <button class="modal-close" (click)="cancelDeleteRole()" aria-label="Close">&times;</button>
+      </div>
+
+      <p class="confirm-text">
+        Delete <strong>{{ roleToDelete.role_name }}</strong
+        >? Users holding this role will lose it. This can't be undone.
+      </p>
+
+      <div class="confirm-actions">
+        <button
+          class="btn-cancel"
+          type="button"
+          (click)="cancelDeleteRole()"
+          [disabled]="deletingRole"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn-danger"
+          type="button"
+          (click)="confirmDeleteRole()"
+          [disabled]="deletingRole"
+        >
+          {{ deletingRole ? 'Deleting…' : 'Delete role' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</app-layout>

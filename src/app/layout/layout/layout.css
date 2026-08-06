@@ -15,7 +15,7 @@
     --nav-h: 52px;
     --sidebar-w: 56px;
 
-    --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font: 'lato','Inter', 'Segoe UI', system-ui, sans-serif;
 
     --shadow-nav: 0 1px 0 var(--border);
 }
@@ -157,6 +157,15 @@
     object-fit: cover;
 }
 
+.app-version{
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #6c757d;
+    text-align: center;
+    padding: 8px;
+}
+
 /* ========================================
    BODY LAYOUT
 ======================================== */
@@ -252,6 +261,7 @@ button.panel-toggle-btn-nav {
     background: var(--bg-page);
     padding: 0;
     display: flex;
+    /* flex-direction: column; */
     /* let left-panel / main-content / right-panel fill height */
 }
 
@@ -266,4 +276,108 @@ button.panel-toggle-btn-nav {
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 10px;
+}
+
+.nav-item.disabled {
+    pointer-events: none;
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.sidebar-nav>.nav-item {
+    position: relative;
+    /* required for the indicator */
+}
+
+.nav-item.active {
+    background: #eff6ff;
+    color: var(--blue-accent);
+}
+
+.sidebar-nav>.nav-item.active::after {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 38px;
+    background: var(--blue-accent);
+    /* border-radius: 4px 0 0 4px; */
+}
+/* --------------------- */
+.logout-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.logout-popup {
+    width: 340px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+    animation: popupFade .2s ease;
+}
+
+.logout-popup h3 {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: #1a1a2e;
+}
+
+.logout-popup p {
+    margin: 0 0 24px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-cancel,
+.btn-confirm {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-confirm {
+    background: #3B82F6;
+    color: white;
+}
+
+.btn-cancel:hover {
+    background: #d1d5db;
+}
+
+.btn-confirm:hover {
+    background: #2563eb;
+}
+
+@keyframes popupFade {
+    from {
+        transform: scale(.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }

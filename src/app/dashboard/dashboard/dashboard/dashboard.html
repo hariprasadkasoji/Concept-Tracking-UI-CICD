@@ -6,7 +6,14 @@
         <h1 class="page-title">Concept Management</h1>
         <p class="page-subtitle">Track, manage, and submit concepts through the workflow</p>
       </div>
-      <button class="btn-add-concept" (click)="onAddNewConcept()">+ Add New Concept</button>
+      <button
+        class="btn-add-concept"
+        (click)="onAddNewConcept()"
+        [disabled]="!canCreateConcept"
+        [title]="!canCreateConcept ? 'You do not have permission to create a new concept.' : ''"
+      >
+        + Add New Concept
+      </button>
     </div>
 
     <!-- ── Stat Cards ──────────────────────────────────── -->
@@ -171,52 +178,65 @@
             class="table-search-input"
             type="text"
             [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange()"
             placeholder="Search concepts, status…"
           />
-          <button *ngIf="searchQuery" class="table-search-clear" (click)="searchQuery = ''">
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#94a3b8"
-              stroke-width="2.5"
-              stroke-linecap="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          @if (searchQuery) {
+            <button class="table-search-clear" (click)="searchQuery = ''; onSearchChange()">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#94a3b8"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          }
         </div>
       </div>
 
       <!-- Grid body -->
       <div class="table-scroll-wrapper">
         <!-- Loading -->
-        <div *ngIf="loading" class="table-empty-state">
-          <div class="ct-loader">
-            <div class="ct-loader-track">
-              <div class="ct-loader-dots">
-                <span class="ct-loader-dot"></span>
-                <span class="ct-loader-dot"></span>
-                <span class="ct-loader-dot"></span>
+        @if (initialLoad) {
+          <div class="table-empty-state">
+            <div class="ct-loader">
+              <div class="ct-loader-track">
+                <div class="ct-loader-dots">
+                  <span class="ct-loader-dot"></span>
+                  <span class="ct-loader-dot"></span>
+                  <span class="ct-loader-dot"></span>
+                </div>
               </div>
+              <span class="ct-loader-label">Loading concepts…</span>
             </div>
-            <span class="ct-loader-label">Loading concepts…</span>
           </div>
-        </div>
+        }
 
         <!-- AG Grid -->
         <ag-grid-angular
-          *ngIf="!loading"
-          class="ag-theme-alpine concept-grid"
-          [rowData]="rowData"
+          style="width: 100%; height: 100%"
           [columnDefs]="columnDefs"
           [defaultColDef]="defaultColDef"
+          [rowModelType]="rowModelType"
+          [cacheBlockSize]="PAGE_SIZE"
+          [cacheOverflowSize]="cacheOverflowSize"
+          [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+          [infiniteInitialRowCount]="infiniteInitialRowCount"
+          [maxBlocksInCache]="maxBlocksInCache"
           [pagination]="pagination"
-          [paginationPageSize]="paginationPageSize"
+          [paginationPageSize]="PAGE_SIZE"
           [paginationPageSizeSelector]="paginationPageSizeSelector"
-          [quickFilterText]="searchQuery"
+          [overlayNoRowsTemplate]="overlayNoRowsTemplate"
+          [overlayLoadingTemplate]="overlayLoadingTemplate"
+          (gridReady)="onGridReady($event)"
+          (filterChanged)="onFilterChanged()"
+          (paginationChanged)="onPaginationChanged()"
           (cellClicked)="onGridCellClicked($event)"
         >
         </ag-grid-angular>

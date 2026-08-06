@@ -9,38 +9,55 @@ import { ToastrService } from 'ngx-toastr';
   styleUrl: './auth-callback.css',
 })
 export class AuthCallback implements OnInit {
-  constructor(private route: ActivatedRoute, private router: Router,private toastr: ToastrService) {}
+  constructor(private route: ActivatedRoute, private router: Router, private toastr: ToastrService) {}
 
- ngOnInit(): void {
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      const token = params['token'];
+      const uid = params['uid'];
+      const name = params['name'];
+      const roleId = params['role_id'];
+      const roleName = params['roleName'];
 
-  this.route.queryParams.subscribe(params => {
+      // Example: backend sends comma-separated role IDs and names
+      const roleIds = params['role_ids']?.split(',') ?? [];
+      const roleNames = params['role_names']?.split(',') ?? [];
 
-  console.log(params, "callback params");
-  const token = params['token'];
-  const roleId = Number(params['role_id']);
-  const clientname = params['client_name'];
-  const uid = params['uid'];
-  const name = params['name'];
-  const roleName = params['roleName'];
-  console.log(token, roleId,uid,roleName);
-  if (token) {
-    // Store token & info
-    sessionStorage.setItem('authToken', token);
-    sessionStorage.setItem('roleId', roleId.toString());
-    sessionStorage.setItem('userId', uid || '');
-    sessionStorage.setItem('roleName', roleName || '');
+      if (token) {
+        sessionStorage.setItem('authToken', token);
+        sessionStorage.setItem('userId', uid || '');
+        sessionStorage.setItem('userName', name || '');
 
-    // sessionStorage.setItem('client', clientname|| '');
-    sessionStorage.setItem('userName', name || '');
-    this.router.navigate(['/dashboard'], { replaceUrl: true });
-  } 
-  else {
-    console.error('No access token found in callback URL');
-     this.toastr.error('Login Failed !!','Error');
-    this.router.navigate(['unauthorized'], { replaceUrl: true });
+        if (roleIds.length > 1) {
+          // Store roles for the selection page
+          sessionStorage.setItem('roles', JSON.stringify(
+            roleIds.map((id: string, index: number) => ({
+              roleId: id,
+              roleName: roleNames[index]
+            }))
+          ));
+
+          this.router.navigate(['/auth/select-role'], {
+            replaceUrl: true
+          });
+        } else {
+          sessionStorage.setItem('roleId', roleId || '');
+          sessionStorage.setItem('roleName', roleName || '');
+
+          // Single-role login: route admins straight to the admin page,
+          // everyone else to the regular dashboard.
+          const isAdmin = (roleName || '').toLowerCase() === 'admin';
+
+          this.router.navigate([isAdmin ? '/admin' : '/dashboard'], {
+            replaceUrl: true
+          });
+        }
+      } else {
+        this.toastr.error('Login Failed !!', 'Error');
+        this.router.navigate(['/unauthorized'], {
+          replaceUrl: true
+        });
+      }
+    });
   }
-  });
-  }
-
-  
 }

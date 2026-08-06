@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import {  Observable } from 'rxjs';
 import { AppConfig } from '../app.config';
+import { MyRolesResponse } from '../layout/layout/layout';
 
 @Injectable({
   providedIn: 'root',
@@ -24,15 +25,13 @@ export class Service {
 
   clear() {
     sessionStorage.clear();
-    sessionStorage.removeItem('user_input');
-    sessionStorage.removeItem('generated_sql');
   }
 
   // ----------------
 
-  getdashboardConcepts(): Observable<any> {
+  getdashboardConcepts(requestBody: any): Observable<any> {
     const url = `${this.apiBaseUrl}api/dashboard-concepts`;
-    return this.http.get<any>(url);
+    return this.http.post<any>(url, requestBody);
   }
 
   getmasterdata(): Observable<any> {
@@ -45,10 +44,11 @@ export class Service {
    *  status_permissions.py matrix the create-concept endpoint enforces —
    *  this is what the dropdown should be filtered against, not the raw
    *  developmentStatusOptions list from master-data. */
-  getAllowedStatuses(userId: number, currentStatus: string): Observable<any> {
+  getAllowedStatuses(userId: number, currentStatus: string, roleName: string): Observable<any> {
     const params = new HttpParams()
       .set('user_id', userId)
-      .set('current_status', currentStatus || 'New');
+      .set('current_status', currentStatus || 'New')
+      .set('role_name', roleName || '');
     const url = `${this.apiBaseUrl}api/allowed-statuses`;
     return this.http.get<any>(url, { params });
   }
@@ -58,6 +58,26 @@ export class Service {
     return this.http.post<any>(url,formData);
   }
 
+  /** Second step of login for a user with more than one role - exchanges
+   *  the short-lived pending_token + chosen role_id for a real session
+   *  token via POST /select-role. */
+  selectRole(pendingToken: string, roleId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}select-role`;
+    return this.http.post<any>(url, { pending_token: pendingToken, role_id: roleId });
+  }
+
+  /** Mid-session role change - the current valid token proves identity,
+   *  no password re-entry needed. Returns a new token under the new role. */
+  switchRole(roleId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}switch-role`;
+    return this.http.post<any>(url, { role_id: roleId });
+  }
+
+  getMyRoles(userId: number): Observable<MyRolesResponse> {
+    const params = new HttpParams().set('user_id', userId);
+    const url = `${this.apiBaseUrl}my-roles`;
+    return this.http.get<MyRolesResponse>(url, { params });
+  }
   // submitclientApproval(data: any): Observable<any> {
   //   return this.http.post(`${this.apiBaseUrl}api/submit_client_approval`, data);
   // }
@@ -101,4 +121,110 @@ export class Service {
     const url = `${this.apiBaseUrl}api/delete-attachment`;
     return this.http.post<any>(url, formData);
   }
+
+  // =====================================================================
+  // MASTER DATA MANAGEMENT (admin config screen)
+  // Backs master_data_management_route, prefix
+  // /api/user-management/master-data. Coded categories (Client Name,
+  // Master Concept Name, Review Type, Claim Type) carry a code + is_active
+  // flag; plain categories (Development Status, Priority, Client Approval
+  // Status) are name-only, no is_active, no delete route on the backend.
+  // `category` must match whatever resolve_coded()/resolve_plain() expect
+  // in master_data_queries.py.
+  // =====================================================================
+
+  getCodedMasterData(category: string): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/coded/${category}`;
+    return this.http.get<any>(url);
+  }
+
+  createCodedMasterData(category: string, payload: { code: string; name: string; is_active: number; [extra: string]: string | number }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/coded/${category}`;
+    return this.http.post<any>(url, payload);
+  }
+
+  updateCodedMasterData(category: string, code: string, payload: { name: string; is_active: number; [extra: string]: string | number }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/coded/${category}/${code}`;
+    return this.http.put<any>(url, payload);
+  }
+
+  deleteCodedMasterData(category: string, code: string): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/coded/${category}/${code}`;
+    return this.http.delete<any>(url);
+  }
+
+  getPlainMasterData(category: string): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/plain/${category}`;
+    return this.http.get<any>(url);
+  }
+
+  createPlainMasterData(category: string, payload: { name: string }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/plain/${category}`;
+    return this.http.post<any>(url, payload);
+  }
+
+  updatePlainMasterData(category: string, itemId: number, payload: { name: string }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/plain/${category}/${itemId}`;
+    return this.http.put<any>(url, payload);
+  }
+
+  deletePlainMasterData(category: string, itemId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/master-data/plain/${category}/${itemId}`;
+    return this.http.delete<any>(url);
+  }
+
+  // =====================================================================
+  // USER MANAGEMENT (admin: users, roles, role assignment)
+  // Backs user_management_route, prefix /api/user-management.
+  // Every route requires the caller to already hold the 'Admin' role.
+  // =====================================================================
+
+  getUsers(body: any): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users/list`;
+    return this.http.post<any>(url,body);
+  }
+
+  createUser(payload: { username: string; password: string; name: string; is_active: boolean; role_ids: number[] }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users`;
+    return this.http.post<any>(url, payload);
+  }
+
+  updateUser(userId: number, payload: { name: string; is_active: boolean }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users/${userId}`;
+    return this.http.put<any>(url, payload);
+  }
+
+  getRoles(): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/roles`;
+    return this.http.get<any>(url);
+  }
+
+  createRole(payload: { role_name: string }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/roles`;
+    return this.http.post<any>(url, payload);
+  }
+
+  // NOTE: this route doesn't exist yet on user_management_route (only
+  // GET/POST /roles are defined there) — add a DELETE /roles/{role_id}
+  // handler on the backend for this to work.
+  deleteRole(roleId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/roles/${roleId}`;
+    return this.http.delete<any>(url);
+  }
+
+  getUserRoles(userId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users/${userId}/roles`;
+    return this.http.get<any>(url);
+  }
+
+  assignUserRole(userId: number, payload: { role_id: number }): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users/${userId}/roles`;
+    return this.http.post<any>(url, payload);
+  }
+
+  unassignUserRole(userId: number, roleId: number): Observable<any> {
+    const url = `${this.apiBaseUrl}api/user-management/users/${userId}/roles/${roleId}`;
+    return this.http.delete<any>(url);
+  }
 }
+

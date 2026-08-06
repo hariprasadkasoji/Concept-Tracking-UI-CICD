@@ -21,7 +21,7 @@
   --radius-md: 10px;
   --radius-lg: 14px;
 
-  --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font: 'Lato', sans-serif;
   --shadow-card: 0 1px 4px rgba(0, 0, 0, .06), 0 0 0 1px rgba(0, 0, 0, .04);
 }
 
@@ -36,13 +36,13 @@
 
 /* ── Left panel ────────────────────────────── */
 .left-panel {
-  width: 300px;
+  width: 305px;
   min-width: 220px;
   background: var(--bg-white);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 16px;
+  padding: 10px;
   overflow-y: auto;
   transition: width .2s ease, min-width .2s ease, padding .2s ease;
 }
@@ -241,6 +241,16 @@
   background: #2563eb;
 }
 
+.btn-add-concept:disabled {
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.btn-add-concept:disabled:hover {
+  background: var(--bg-page);
+}
+
 /* ── Main content ──────────────────────────── */
 .main-content {
   flex: 1;
@@ -292,6 +302,7 @@
 }
 
 .page-title {
+  font-family: var(--font);
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
@@ -328,6 +339,26 @@
 .status-badge.status-completed {
   background: #16a34a;
   color: white;
+}
+
+/* Draft badge for the concept detail page header — sits next to
+   status-badge in .page-title-row, shown only while isDraftConcept is
+   true. Static hourglass icon (no animation), amber to read as
+   "pending/not yet submitted" without competing with status-badge's
+   solid-fill palette above. */
+.page-draft-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  background: #3b82f600;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
 }
 
 .page-meta {
@@ -601,7 +632,7 @@
   font-size: 11px;
   font-weight: 700;
   font-style: italic;
-  font-family: Georgia, serif;
+  font-family: var(--font);
 }
 
 .draft-lock-text {
@@ -723,6 +754,22 @@
   cursor: not-allowed;
 }
 
+/* Generic disabled state for plain text/number inputs — mirrors
+   .form-select:disabled. Needed for role-locked fields (e.g. Data Science
+   Programmer viewing QA Schedule / Production Schedule) so a disabled
+   field is visibly, not just functionally, read-only. */
+.form-input:disabled {
+  background: var(--bg-page);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.date-calendar-btn:disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: .5;
+}
+
 /* Date inputs (QA Schedule / Production Schedule / Submitted To Client On)
    ─────────────────────────────────────────────────────────────────────
    The visible field is a plain text input we format ourselves as
@@ -824,7 +871,15 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, .12);
 }
 
-/* Select */
+/* ═══════════════════════════════════════════════
+   Select / Dropdown — theme-consistent across every
+   dropdown in the app (Client Name, Master Concept,
+   Review Type, Claim Type, Development Status, Priority,
+   Ideation Requestor, Data Science Programmer, Client
+   Approval Status, etc.). All of them share this exact
+   markup (.select-wrapper > .form-select + .select-arrow),
+   so styling it once here themes every dropdown at once.
+═══════════════════════════════════════════════ */
 .select-wrapper {
   position: relative;
 }
@@ -832,8 +887,24 @@
 .form-select {
   width: 100%;
   appearance: none;
-  padding-right: 28px;
+  padding-right: 32px;
   cursor: pointer;
+  background: var(--bg-white);
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+/* Hover: same soft blue-accent tint used on .attach-dropzone / .btn-browse
+   hover states elsewhere in this theme — skipped for invalid/disabled so
+   those states aren't overridden. */
+.select-wrapper:not(.invalid):hover .form-select:not(:disabled) {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.select-wrapper:not(.invalid) .form-select:focus {
+  border-color: var(--blue-accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+  background: var(--bg-white);
 }
 
 .form-select:disabled {
@@ -842,18 +913,58 @@
   cursor: not-allowed;
 }
 
+.select-wrapper:has(.form-select:disabled):hover .form-select {
+  border-color: var(--border);
+  background: var(--bg-page);
+}
+
 .select-wrapper:has(.form-select:disabled) .select-arrow {
   opacity: .4;
 }
 
+/* Options list — browsers vary in how much of this they honor for the
+   native popup itself, but this keeps the closed control and whatever
+   the browser does render on-theme rather than default black-on-white. */
+.form-select option {
+  color: var(--text-primary);
+  background: var(--bg-white);
+  font-family: var(--font);
+  font-size: 13px;
+}
+
+/* Chevron — CSS-drawn (no font-rendering differences across browsers/OS
+   like the old "▾" glyph had), colored to match the theme, and it
+   rotates/brightens on hover + focus so the control reads as "live"
+   the same way the calendar-picker button and toggle buttons do. */
 .select-arrow {
   position: absolute;
-  right: 10px;
+  right: 13px;
   top: 50%;
-  transform: translateY(-50%);
-  font-size: 25px;
-  color: var(--text-muted);
+  width: 7px;
+  height: 7px;
+  font-size: 0;
   pointer-events: none;
+  border-right: 1.6px solid var(--text-muted);
+  border-bottom: 1.6px solid var(--text-muted);
+  transform: translateY(-65%) rotate(45deg);
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.select-wrapper:not(.invalid):hover .select-arrow {
+  border-color: var(--blue-accent);
+}
+
+.select-wrapper:not(.invalid) .form-select:focus~.select-arrow {
+  border-color: var(--blue-accent);
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.select-wrapper.invalid .form-select:focus~.select-arrow {
+  transform: translateY(-35%) rotate(225deg);
+}
+
+.select-wrapper.invalid .select-arrow {
+  border-color: #ef4444;
 }
 
 /* Prefix/suffix inputs */
@@ -932,6 +1043,28 @@
 
 .toggle-btn:not(.active):hover {
   background: var(--bg-page);
+}
+
+/* Disabled state — the [disabled] binding on these buttons (driven by
+   canEditConfidenceScore, i.e. canFullEdit) already blocks the click
+   functionally for Viewer/Operations/Data Science Programmer, but
+   without this the button still LOOKED fully clickable: same color,
+   same pointer cursor, same hover highlight. This makes the disabled
+   state visible to match the actual (already-correct) behavior. */
+.toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.toggle-btn:not(.active):disabled:hover {
+  background: var(--bg-white);
+}
+
+.toggle-btn.active:disabled {
+  /* Keep the selected value legible/blue while still reading as
+     non-interactive, rather than fading it to the same washed-out
+     look as the two unselected options. */
+  opacity: .75;
 }
 
 /* Pending / empty */
@@ -2863,6 +2996,12 @@
   color: var(--text-muted);
 }
 
+.sd-meta-input.readonly {
+  background: var(--bg-page);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 /* PDF row — has View + Delete buttons */
 .sd-pdf-row {
   flex-wrap: wrap;
@@ -2957,6 +3096,17 @@
   border-color: #ef4444;
   color: #ef4444;
   background: #fff5f5;
+}
+
+.sd-del-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sd-del-btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: white;
 }
 
 /* ── Submit row ─────────────────────────────── */
@@ -3201,6 +3351,11 @@
   color: var(--text-muted);
 }
 
+.sd-meta-input.readonly {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
 /* PDF row — has buttons at the right */
 .sd-pdf-row {
   flex-wrap: wrap;
@@ -3231,6 +3386,17 @@
   border-color: #ef4444;
   color: #ef4444;
   background: #fff5f5;
+}
+
+.sd-del-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sd-del-btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: white;
 }
 
 /* ── Submit row ─────────────────────────────── */
@@ -3548,7 +3714,7 @@
   gap: 10px;
   overflow-y: auto;
   flex: 1;
-  padding-top: 4px;
+  padding: 4px 2px 0px 0px;
   margin: 5px 0px;
 }
 
@@ -3584,13 +3750,16 @@
 }
 
 .lu-card-name {
-  font-size: 13px;
-  font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 21px;
+  letter-spacing: 0px;
 }
 
 .lu-card-bottom {
@@ -3601,18 +3770,31 @@
 }
 
 .lu-card-id {
-  font-size: 11.5px;
   color: var(--text-muted);
+  font-family: var(--font);
+  font-weight: 500;
+  font-style: normal;
+  font-size: 11px;
+  line-height: 18px;
+  letter-spacing: 0px;
+  text-align: right;
 }
 
 .lu-card-updated {
-  font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
+  font-family: var(--font);
+  font-weight: 500;
+  font-style: normal;
+  font-size: 11px;
+  line-height: 18px;
+  letter-spacing: 0px;
+  text-align: right;
 }
 
 /* Status pill — reuses dashboard badge palette */
 .lu-badge {
+  font-family: var(--font);
   display: inline-flex;
   align-items: center;
   padding: 3px 11px;
@@ -3681,6 +3863,23 @@
 .lu-badge.lu-superseded {
   background: #f8fafc;
   color: #94a3b8;
+}
+
+/* Draft indicator — an animated hourglass sitting next to the real
+   status badge (not replacing it), so the card still communicates where
+   the concept actually stands while flagging that it's unsaved/draft. */
+.lu-badge-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.lu-hourglass-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--amber, #d97706);
+  flex-shrink: 0;
 }
 
 /* To remove the increment decrement arrows from number input fields */

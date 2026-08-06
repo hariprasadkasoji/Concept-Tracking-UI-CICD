@@ -1,0 +1,481 @@
+:host {
+    --cfg-blue: rgba(94, 129, 244, 1);
+    --cfg-blue-dark: rgba(60, 78, 207, 1);
+    --cfg-red: rgb(230, 56, 56);
+    --cfg-bg: rgba(255, 255, 255, 1);
+    --cfg-card: rgba(255, 255, 255, 1);
+    --cfg-row: rgba(242, 243, 246, 1);
+    --cfg-row-hover: rgba(239, 246, 255, 1);
+    --cfg-border: rgba(230, 231, 236, 1);
+    --cfg-text: rgba(31, 36, 48, 1);
+    --cfg-muted: rgba(122, 127, 143, 1);
+    --cfg-radius: 10px;
+
+    display: block;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    --font: 'lato', 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+:host *,
+:host *::before,
+:host *::after {
+    box-sizing: border-box;
+}
+
+.config-page {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 0px;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    background: var(--cfg-bg);
+}
+
+/* ---------- Left nav ---------- */
+.config-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-self: start;
+    padding: 10px;
+    border-right: 1px solid var(--cfg-border);
+    height: 100%;
+}
+
+.config-nav__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 13px 16px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--cfg-text);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* .config-nav__item:hover {
+    background: var(--cfg-row-hover);
+    color: var(--cfg-text);
+} */
+
+.config-nav__item--active {
+    background: var(--cfg-blue);
+    color: var(--cfg-bg);
+    font-weight: 600;
+}
+
+.config-nav__chevron {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+/* ---------- Right panel ---------- */
+.config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    padding: 15px 24px 15px 0px;
+}
+
+.config-panel__header h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cfg-text);
+}
+
+.config-panel__header p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--cfg-muted);
+}
+
+.config-card {
+    background: var(--cfg-card);
+    border: 1px solid var(--cfg-border);
+    border-radius: var(--cfg-radius);
+    overflow: hidden;
+}
+
+.config-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 15px;
+    border-bottom: 1px solid var(--cfg-border);
+    background: var(--cfg-row-hover);
+}
+
+.config-card__header h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cfg-text);
+}
+
+.config-card__body {
+    padding: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Themed scrollbar — Firefox */
+    scrollbar-width: thin;
+    /* scrollbar-color: var(--cfg-blue) var(--cfg-row); */
+}
+
+/* Themed scrollbar — Chromium / Safari */
+.config-card__body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.config-card__body::-webkit-scrollbar-track {
+    background: var(--cfg-row);
+    border-radius: 8px;
+}
+
+.config-card__body::-webkit-scrollbar-thumb {
+    background: var(--cfg-blue);
+    border-radius: 8px;
+    border: 2px solid var(--cfg-row);
+}
+
+.config-card__body::-webkit-scrollbar-thumb:hover {
+    background: var(--cfg-blue-dark);
+}
+
+.btn-add {
+    background: var(--cfg-blue);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-add:hover {
+    background: var(--cfg-blue-dark);
+}
+
+/* ---------- Item grid ---------- */
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.config-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--cfg-row);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cfg-text);
+    transition: background 0.15s ease;
+}
+
+.config-item__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.config-item__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.config-item__code {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--cfg-blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.config-item__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.config-item__desc {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--cfg-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.config-item:hover {
+    background: var(--cfg-row-hover);
+}
+
+.config-item__remove {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--cfg-red);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.config-item:hover .config-item__remove {
+    opacity: 1;
+}
+
+/* ---------- Empty state ---------- */
+.config-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px 4px;
+    color: var(--cfg-muted);
+    font-size: 14px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+    .config-page {
+        grid-template-columns: 1fr;
+    }
+
+    .config-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .config-nav__item {
+        width: auto;
+    }
+}
+
+/* ---------- Add Configuration modal ---------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 22, 30, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--cfg-card);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(20, 22, 30, 0.18);
+    padding: 20px 20px 24px;
+}
+
+.modal-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.modal-card__header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cfg-text);
+}
+
+.modal-card__close {
+    border: none;
+    background: transparent;
+    color: var(--cfg-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-card__close:hover {
+    background: var(--cfg-row);
+    color: var(--cfg-text);
+}
+
+.modal-card__body {
+    margin-bottom: 20px;
+}
+
+.modal-field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cfg-text);
+    margin-bottom: 8px;
+}
+
+.modal-field-hint {
+    font-weight: 400;
+    color: var(--cfg-muted);
+}
+
+.modal-field-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--cfg-border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--cfg-text);
+    background: var(--cfg-bg);
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.modal-field-input::placeholder {
+    color: var(--cfg-muted);
+}
+
+.modal-field-input:focus {
+    border-color: var(--cfg-blue);
+}
+
+.modal-save-btn {
+    width: 100%;
+    background: var(--cfg-blue);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.modal-save-btn:hover {
+    background: var(--cfg-blue-dark);
+}
+
+/* ---------- Remove Configuration confirm modal ---------- */
+.modal-confirm-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--cfg-muted);
+    /* A name with no spaces (long codes, pasted IDs, etc.) is otherwise
+       treated as one unbreakable word and overflows the fixed-width
+       .modal-card instead of wrapping onto the next line. */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.modal-confirm-text strong {
+    color: var(--cfg-text);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.modal-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.modal-cancel-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--cfg-text);
+    border: 1px solid var(--cfg-border);
+    border-radius: 8px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.modal-cancel-btn:hover {
+    background: var(--cfg-row);
+}
+
+.modal-delete-btn {
+    width: 100%;
+    background: var(--cfg-red);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+}
+
+.modal-delete-btn:hover {
+    filter: brightness(0.92);
+}
+
+/* ---------- Status / error text ---------- */
+.config-status {
+    margin: 0;
+    font-size: 14px;
+    color: var(--cfg-muted);
+    padding: 4px 0;
+}
+
+.config-status--error {
+    color: var(--cfg-red);
+}
+
+.modal-field-spacer {
+    height: 14px;
+}
+
+.modal-field-error {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--cfg-red);
+}
+
+.modal-save-btn:disabled,
+.modal-delete-btn:disabled {
+    opacity: 0.65;
+    cursor: default;
+}

@@ -1,0 +1,24 @@
+<!-- <app-layout> -->
+<div class="select-role-page">
+  <div class="select-role-card">
+    <h2 class="select-role-title">Choose your role</h2>
+    <p class="select-role-subtitle" *ngIf="name">Signed in as {{ name }}</p>
+
+    <div *ngIf="loadError" class="select-role-error">
+      Your login session is invalid or has expired. Please
+      <a routerLink="/">log in again</a>.
+    </div>
+
+    <div *ngIf="!loadError" class="select-role-list">
+      <button
+        *ngFor="let role of roles"
+        class="select-role-option"
+        [disabled]="submitting"
+        (click)="chooseRole(role)"
+      >
+        {{ role.role_name }}
+      </button>
+    </div>
+  </div>
+</div>
+<!-- </app-layout> -->
