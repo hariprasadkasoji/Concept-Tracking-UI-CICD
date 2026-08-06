@@ -44,7 +44,7 @@ jobs:
       - name: Copy web.config into build output
         shell: powershell
         run: |
-          Copy-Item -Path "$env:GITHUB_WORKSPACE\deploy\web.config" `
+          Copy-Item -Path "$env:GITHUB_WORKSPACE\web.config" `
                      -Destination "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser\web.config" `
                      -Force
         
