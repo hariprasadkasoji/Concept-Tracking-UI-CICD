@@ -1,4 +1,5 @@
 name: Build and Deploy Angular UI
+
 on:
   push:
     branches: [ main ]
@@ -8,16 +9,9 @@ on:
 jobs:
   build:
     runs-on: self-hosted
-    # Prevents the version-bump commit (pushed by this job) from re-triggering
-    # this workflow in an infinite loop.
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          # Needed so we can push a commit back to main
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
       - name: Verify Node.js is available
         run: node --version
@@ -28,73 +22,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Update version
-        run: node scripts/update-version.js
-
-      - name: Commit version bump
-        shell: powershell
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json src/environments/version.ts
-          $status = git status --porcelain
-          if ($status) {
-            git commit -m "chore: bump version [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
-            Write-Host "Version bump committed and pushed."
-          } else {
-            Write-Host "No version changes to commit."
-          }
-
       - name: Build Angular application
         run: npm run build -- --configuration production
-
-      - name: Check Angular build output
-        shell: powershell
-        run: |
-          Get-ChildItem "$env:GITHUB_WORKSPACE\dist" -Recurse
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: angular-build
-          path: dist/Concept-Tracking/browser
-          retention-days: 7
 
   deploy:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: self-hosted
     steps:
-      - name: Checkout code
+      - name: Checkout latest main
         uses: actions/checkout@v5
-        # Only needed to grab web.config from the repo; not used for building
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: angular-build
-          path: dist-download
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Angular application
+        run: npm run build -- --configuration production
 
       - name: Copy web.config into build output
         shell: powershell
         run: |
           Copy-Item -Path "$env:GITHUB_WORKSPACE\web.config" `
-                     -Destination "$env:GITHUB_WORKSPACE\dist-download\web.config" `
+                     -Destination "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser\web.config" `
                      -Force
 
-      - name: Check downloaded build output
+      - name: Check Angular build output
         shell: powershell
         run: |
-          Get-ChildItem "$env:GITHUB_WORKSPACE\dist-download" -Recurse
+          Get-ChildItem "$env:GITHUB_WORKSPACE\dist" -Recurse
 
       - name: Stop IIS app pool before file copy
         shell: powershell
         run: |
           Import-Module WebAdministration
-
           $appPool = "CONCEPT-TRACKING-UI-CICD"
-
           if ((Get-WebAppPoolState -Name $appPool).Value -eq "Started") {
               Stop-WebAppPool -Name $appPool
               Write-Host "App pool stopped"
@@ -108,10 +69,9 @@ jobs:
         shell: powershell
         run: |
           robocopy `
-            "$env:GITHUB_WORKSPACE\dist-download" `
+            "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser" `
             "C:\apps\concept-tracking-CICD\ui" `
             /MIR
-
           if ($LASTEXITCODE -ge 8) {
             exit 1
           } else {
