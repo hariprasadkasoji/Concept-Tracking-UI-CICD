@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: self-hosted
@@ -12,12 +15,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0   # need full history/tags for git describe
+          fetch-depth: 0
 
       - name: Verify Node.js is available
         run: node --version
       - name: Verify npm is available
         run: npm --version
+      - name: Verify git is available
+        run: git --version
 
       - name: Install dependencies
         run: npm ci
@@ -25,87 +30,25 @@ jobs:
       - name: Build Angular application
         run: npm run build -- --configuration production
 
+      - name: Commit version bump
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        shell: powershell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            $pkgVersion = node -e "console.log(require('./package.json').version)"
+            git commit -m "chore: bump version to $pkgVersion [skip ci]"
+            git push origin HEAD:main
+          } else {
+            Write-Host "No version changes to commit"
+          }
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: angular-dist
           path: dist/Concept-Tracking/browser
           retention-days: 1
-
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: self-hosted
-    steps:
-      - name: Checkout latest main
-        uses: actions/checkout@v5   # only needed for web.config
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: angular-dist
-          path: dist_output
-
-      - name: Copy web.config into build output
-        shell: powershell
-        run: |
-          Copy-Item -Path "$env:GITHUB_WORKSPACE\web.config" `
-                     -Destination "$env:GITHUB_WORKSPACE\dist_output\web.config" `
-                     -Force
-
-      - name: Check build output
-        shell: powershell
-        run: |
-          Get-ChildItem "$env:GITHUB_WORKSPACE\dist_output" -Recurse
-
-      - name: Stop IIS app pool before file copy
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-          $appPool = "CONCEPT-TRACKING-UI-CICD"
-          if ((Get-WebAppPoolState -Name $appPool).Value -eq "Started") {
-              Stop-WebAppPool -Name $appPool
-              Write-Host "App pool stopped"
-              Start-Sleep -Seconds 5
-          } else {
-              Write-Host "App pool already stopped, continuing..."
-          }
-
-      - name: Copy Angular build to IIS folder
-        shell: powershell
-        run: |
-          robocopy `
-            "$env:GITHUB_WORKSPACE\dist_output" `
-            "C:\apps\concept-tracking-CICD\ui" `
-            /MIR
-          if ($LASTEXITCODE -ge 8) { exit 1 } else { exit 0 }
-
-      - name: Start IIS app pool
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-          Start-WebAppPool -Name "CONCEPT-TRACKING-UI-CICD"
-
-      - name: Wait for app to become healthy
-        shell: powershell
-        run: |
-          $maxAttempts = 30
-          $attempt = 0
-          $success = $false
-          while ($attempt -lt $maxAttempts) {
-            $attempt++
-            try {
-              $response = curl.exe -k -s -o NUL -w "%{http_code}" https://localhost:8400/
-              if ($response -eq "200") {
-                Write-Host "Application is healthy after $attempt attempts."
-                $success = $true
-                break
-              }
-            } catch {}
-            Write-Host "Attempt $attempt/$maxAttempts - waiting 5 seconds..."
-            Start-Sleep -Seconds 5
-          }
-          if (-not $success) {
-            Write-Host "Application failed health check."
-            exit 1
-          }
