@@ -75,7 +75,7 @@ jobs:
           $versionFile = "src\environments\version.ts"
 
           $lines = @(
-            "// AUTO-GENERATED at build time — do not edit, do not commit changes to this file",
+            "// AUTO-GENERATED at build time - do not edit, do not commit changes to this file",
             "export const VERSION = {",
             "  version: '$newVersion',",
             "  build: '$shortSha',",
@@ -83,7 +83,7 @@ jobs:
             "};"
           )
 
-          Set-Content -Path $versionFile -Value $lines
+          Set-Content -Path $versionFile -Value $lines -Encoding UTF8
 
           "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
 
