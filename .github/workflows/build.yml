@@ -67,26 +67,23 @@ jobs:
           $patch = [int]$Matches[3] + 1
 
           $newVersion = "v$major.$minor.$patch"
-
           $shortSha = $env:GITHUB_SHA.Substring(0, 7)
-
-          $buildDate = (Get-Date).ToUniversalTime().ToString(
-            "yyyy-MM-dd HH:mm:ss 'UTC'"
-          )
+          $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
 
           Write-Host "Latest tag: $latest -> deploying as $newVersion"
 
           $versionFile = "src\environments\version.ts"
 
-          $content = @"
-                    export const VERSION = {
-                      version: '$newVersion',
-                      build: '$shortSha',
-                      date: '$buildDate'
-                    };
-                    "@
+          $lines = @(
+            "// AUTO-GENERATED at build time — do not edit, do not commit changes to this file",
+            "export const VERSION = {",
+            "  version: '$newVersion',",
+            "  build: '$shortSha',",
+            "  date: '$buildDate'",
+            "};"
+          )
 
-          Set-Content -Path $versionFile -Value $content
+          Set-Content -Path $versionFile -Value $lines
 
           "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
 
