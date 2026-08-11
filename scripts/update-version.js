@@ -6,24 +6,16 @@ const versionPath = path.join(__dirname, '..', 'src', 'environments', 'version.t
 
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
-let [major, minor, patch] = packageJson.version.split('.').map(Number);
-patch++;
-const newVersion = `${major}.${minor}.${patch}`;
-packageJson.version = newVersion;
-
-fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + '\n');
-
-const buildNumber = process.env.GITHUB_RUN_NUMBER || 'local';
-const date = new Date();
-const buildDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
+const buildDate = new Date();
+const formattedDate = `${String(buildDate.getMonth() + 1).padStart(2, '0')}/${String(buildDate.getDate()).padStart(2, '0')}/${buildDate.getFullYear()}`;
 
 const versionContent = `// AUTO-GENERATED at build time — do not edit, do not commit changes to this file
 export const VERSION = {
-  version: 'V${newVersion}',
-  build: '${buildNumber}',
-  date: '${buildDate}'
+  version: 'V${packageJson.version}-local',
+  build: 'local',
+  date: '${formattedDate}'
 };
 `;
 
 fs.writeFileSync(versionPath, versionContent);
-console.log(`✔ Version bumped to V${newVersion} (build ${buildNumber})`);
+console.log(`✔ version.ts generated: V${packageJson.version}-local`);

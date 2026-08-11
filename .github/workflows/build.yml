@@ -1,9 +1,12 @@
 name: Build and Deploy Angular UI
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -11,44 +14,180 @@ permissions:
 jobs:
   build:
     runs-on: self-hosted
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
 
       - name: Verify Node.js is available
         run: node --version
+
       - name: Verify npm is available
         run: npm --version
-      - name: Verify git is available
-        run: git --version
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build Angular application
-        run: npm run build -- --configuration production
+        run: npx ng build --configuration production
 
-      - name: Commit version bump
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Determine next version from tags
+        shell: powershell
+        run: |
+          git fetch --tags --force
+
+          $tags = git tag --list "v*.*.*" |
+            Where-Object { $_ -match '^v\d+\.\d+\.\d+$' }
+
+          if ($tags) {
+            $latest = $tags |
+              Sort-Object { [version]($_ -replace '^v', '') } |
+              Select-Object -Last 1
+          }
+          else {
+            $latest = "v0.0.0"
+          }
+
+          $latest -match '^v(\d+)\.(\d+)\.(\d+)$' | Out-Null
+
+          $major = $Matches[1]
+          $minor = $Matches[2]
+          $patch = [int]$Matches[3] + 1
+
+          $newVersion = "v$major.$minor.$patch"
+
+          $shortSha = $env:GITHUB_SHA.Substring(0, 7)
+
+          $buildDate = (Get-Date).ToUniversalTime().ToString(
+            "yyyy-MM-dd HH:mm:ss 'UTC'"
+          )
+
+          Write-Host "Latest tag: $latest -> deploying as $newVersion"
+
+          $versionFile = "src\environments\version.ts"
+
+          $content = @"
+                    export const VERSION = {
+                      version: '$newVersion',
+                      build: '$shortSha',
+                      date: '$buildDate'
+                    };
+                    "@
+
+          Set-Content -Path $versionFile -Value $content
+
+          "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Angular application
+        run: npx ng build --configuration production
+
+      - name: Copy web.config into build output
+        shell: powershell
+        run: |
+          Copy-Item `
+            -Path "$env:GITHUB_WORKSPACE\web.config" `
+            -Destination "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser\web.config" `
+            -Force
+
+      - name: Stop IIS app pool before file copy
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+
+          $appPool = "CONCEPT-TRACKING-UI-CICD"
+
+          if ((Get-WebAppPoolState -Name $appPool).Value -eq "Started") {
+            Stop-WebAppPool -Name $appPool
+
+            Write-Host "App pool stopped"
+
+            Start-Sleep -Seconds 5
+          }
+          else {
+            Write-Host "App pool already stopped, continuing..."
+          }
+
+      - name: Copy Angular build to IIS folder
+        shell: powershell
+        run: |
+          robocopy `
+            "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser" `
+            "C:\apps\concept-tracking-CICD\ui" `
+            /MIR
+
+          if ($LASTEXITCODE -ge 8) {
+            exit 1
+          }
+          else {
+            exit 0
+          }
+
+      - name: Start IIS app pool
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+
+          Start-WebAppPool -Name "CONCEPT-TRACKING-UI-CICD"
+
+      - name: Wait for app to become healthy
+        shell: powershell
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          $success = $false
+
+          while ($attempt -lt $maxAttempts) {
+            $attempt++
+
+            try {
+              $response = curl.exe `
+                -k `
+                -s `
+                -o NUL `
+                -w "%{http_code}" `
+                https://localhost:8400/
+
+              if ($response -eq "200") {
+                Write-Host "Application is healthy after $attempt attempts."
+
+                $success = $true
+                break
+              }
+            }
+            catch {
+            }
+
+            Write-Host "Attempt $attempt/$maxAttempts - waiting 5 seconds..."
+
+            Start-Sleep -Seconds 5
+          }
+
+          if (-not $success) {
+            Write-Host "Application failed health check."
+            exit 1
+          }
+
+      - name: Tag release
         shell: powershell
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
-            $pkgVersion = node -e "console.log(require('./package.json').version)"
-            git commit -m "chore: bump version to $pkgVersion [skip ci]"
-            git push origin HEAD:main
-          } else {
-            Write-Host "No version changes to commit"
-          }
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: angular-dist
-          path: dist/Concept-Tracking/browser
-          retention-days: 1
+          git tag -a "$env:NEW_VERSION" -m "Release of $env:NEW_VERSION"
+
+          git push origin "$env:NEW_VERSION"
