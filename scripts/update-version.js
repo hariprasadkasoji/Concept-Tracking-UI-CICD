@@ -1,26 +1,29 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-const packagePath = path.join(__dirname, '..', 'package.json');
 const versionPath = path.join(__dirname, '..', 'src', 'environments', 'version.ts');
 
-const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+function getGitVersion() {
+  try {
+    return execSync('git describe --tags --always --dirty', { encoding: 'utf8' }).trim();
+  } catch (err) {
+    console.warn('⚠ Could not read git info, falling back to "dev"');
+    return 'dev';
+  }
+}
 
-let [major, minor, patch] = packageJson.version.split('.').map(Number);
+const buildNumber = process.env.GITHUB_RUN_NUMBER || 'local';
+const version = getGitVersion();
+const buildDate = new Date().toISOString();
 
-patch++;
-
-const newVersion = `${major}.${minor}.${patch}`;
-
-packageJson.version = newVersion;
-
-fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2));
-
-const versionContent = `export const VERSION = {
-  version: '${newVersion}'
+const versionContent = `// AUTO-GENERATED at build time — do not edit, do not commit changes to this file
+export const VERSION = {
+  version: '${version}',
+  build: '${buildNumber}',
+  date: '${buildDate}'
 };
 `;
 
 fs.writeFileSync(versionPath, versionContent);
-
-console.log(`✔ Version updated to ${newVersion}`);
+console.log(`✔ version.ts generated: ${version} (build ${buildNumber})`);

@@ -1,5 +1,4 @@
 name: Build and Deploy Angular UI
-
 on:
   push:
     branches: [ main ]
@@ -12,10 +11,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # need full history/tags for git describe
 
       - name: Verify Node.js is available
         run: node --version
-
       - name: Verify npm is available
         run: npm --version
 
@@ -25,31 +25,38 @@ jobs:
       - name: Build Angular application
         run: npm run build -- --configuration production
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-dist
+          path: dist/Concept-Tracking/browser
+          retention-days: 1
+
   deploy:
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: self-hosted
     steps:
       - name: Checkout latest main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5   # only needed for web.config
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Angular application
-        run: npm run build -- --configuration production
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: angular-dist
+          path: dist_output
 
       - name: Copy web.config into build output
         shell: powershell
         run: |
           Copy-Item -Path "$env:GITHUB_WORKSPACE\web.config" `
-                     -Destination "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser\web.config" `
+                     -Destination "$env:GITHUB_WORKSPACE\dist_output\web.config" `
                      -Force
 
-      - name: Check Angular build output
+      - name: Check build output
         shell: powershell
         run: |
-          Get-ChildItem "$env:GITHUB_WORKSPACE\dist" -Recurse
+          Get-ChildItem "$env:GITHUB_WORKSPACE\dist_output" -Recurse
 
       - name: Stop IIS app pool before file copy
         shell: powershell
@@ -60,8 +67,7 @@ jobs:
               Stop-WebAppPool -Name $appPool
               Write-Host "App pool stopped"
               Start-Sleep -Seconds 5
-          }
-          else {
+          } else {
               Write-Host "App pool already stopped, continuing..."
           }
 
@@ -69,14 +75,10 @@ jobs:
         shell: powershell
         run: |
           robocopy `
-            "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser" `
+            "$env:GITHUB_WORKSPACE\dist_output" `
             "C:\apps\concept-tracking-CICD\ui" `
             /MIR
-          if ($LASTEXITCODE -ge 8) {
-            exit 1
-          } else {
-            exit 0
-          }
+          if ($LASTEXITCODE -ge 8) { exit 1 } else { exit 0 }
 
       - name: Start IIS app pool
         shell: powershell
