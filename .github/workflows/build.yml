@@ -153,10 +153,28 @@ jobs:
 
       - name: Tag release
         shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $api = "https://api.github.com"
+          $headers = @{
+              Authorization          = "Bearer $env:GITHUB_TOKEN"
+              Accept                 = "application/vnd.github+json"
+              "X-GitHub-Api-Version" = "2022-11-28"
+          }
 
-          git tag -a "$env:NEW_VERSION" -m "Release of $env:NEW_VERSION"
+          $body = @{ ref = "refs/tags/$env:NEW_VERSION"; sha = $env:DEPLOY_SHA } | ConvertTo-Json
 
-          git push origin "$env:NEW_VERSION"
+          try {
+              Invoke-RestMethod -Method Post -Uri "$api/repos/$env:REPO/git/refs" `
+                  -Headers $headers -Body $body -ContentType "application/json"
+              Write-Host "Created tag $env:NEW_VERSION on commit $env:DEPLOY_SHA"
+          }
+          catch {
+              Write-Host "Failed to create tag: $($_.Exception.Message)"
+              if ($_.ErrorDetails) { Write-Host $_.ErrorDetails.Message }
+              exit 1
+          }
