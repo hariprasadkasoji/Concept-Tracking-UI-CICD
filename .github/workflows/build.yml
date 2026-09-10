@@ -44,7 +44,7 @@ jobs:
           fetch-tags: true
 
       - name: Bump version
-        run: node scripts/bump-version.js
+        run: node scripts/update-version.js
 
       - name: Read new version into env
         shell: powershell
