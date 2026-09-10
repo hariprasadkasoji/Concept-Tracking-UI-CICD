@@ -45,19 +45,62 @@ jobs:
 
       - name: Bump version
         shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $api = "https://api.github.com"
+          $headers = @{
+              Authorization          = "Bearer $env:GITHUB_TOKEN"
+              Accept                 = "application/vnd.github+json"
+              "X-GitHub-Api-Version" = "2022-11-28"
+          }
+
           $output = node scripts/update-version.js
           Write-Host $output
 
           if ($output -match 'Version updated to (\d+\.\d+\.\d+)') {
-            $newVersion = "v$($Matches[1])"
-            Write-Host "New version: $newVersion"
-            "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
+            $major, $minor, $patch = $Matches[1].Split('.')
+            $major = [int]$major; $minor = [int]$minor; $patch = [int]$patch
           }
           else {
             Write-Error "Could not parse version from update-version.js output"
             exit 1
           }
+
+          $filePath = "src/environments/version.ts"
+
+          # If this tag already exists on GitHub, keep bumping the patch
+          # number and rewriting version.ts until we find one that's free.
+          while ($true) {
+            $candidate = "v$major.$minor.$patch"
+            $checkUri = "$api/repos/$env:REPO/git/ref/tags/$candidate"
+
+            try {
+              Invoke-RestMethod -Uri $checkUri -Headers $headers -ErrorAction Stop | Out-Null
+              Write-Host "$candidate already exists, trying next patch..."
+              $patch++
+
+              $content = Get-Content $filePath -Raw
+              $content = $content -replace "version:\s*['`"]\d+\.\d+\.\d+['`"]", "version: '$major.$minor.$patch'"
+              Set-Content -Path $filePath -Value $content -NoNewline
+            }
+            catch {
+              if ($_.Exception.Response.StatusCode.value__ -eq 404) {
+                Write-Host "$candidate is available."
+                break
+              }
+              else {
+                Write-Error "Unexpected error checking tag: $($_.Exception.Message)"
+                exit 1
+              }
+            }
+          }
+
+          $newVersion = "v$major.$minor.$patch"
+          Write-Host "Final version: $newVersion"
+          "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci
