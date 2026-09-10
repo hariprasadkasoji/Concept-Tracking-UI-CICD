@@ -178,4 +178,42 @@ jobs:
               if ($_.ErrorDetails) { Write-Host $_.ErrorDetails.Message }
               exit 1
           }
-          
+
+      - name: Commit version bump back to main
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $api = "https://api.github.com"
+          $headers = @{
+              Authorization          = "Bearer $env:GITHUB_TOKEN"
+              Accept                 = "application/vnd.github+json"
+              "X-GitHub-Api-Version" = "2022-11-28"
+          }
+
+          $filePath = "src/environments/version.ts"
+          $localContent = Get-Content $filePath -Raw
+          $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($localContent))
+
+          # Need the current file's blob sha on main before we can overwrite it
+          $fileInfo = Invoke-RestMethod -Uri "$api/repos/$env:REPO/contents/$filePath`?ref=main" -Headers $headers
+
+          $body = @{
+              message = "chore: bump version to $env:NEW_VERSION [skip ci]"
+              content = $encoded
+              sha     = $fileInfo.sha
+              branch  = "main"
+          } | ConvertTo-Json
+
+          try {
+              Invoke-RestMethod -Method Put -Uri "$api/repos/$env:REPO/contents/$filePath" `
+                  -Headers $headers -Body $body -ContentType "application/json"
+              Write-Host "Committed version.ts bump ($env:NEW_VERSION) back to main"
+          }
+          catch {
+              Write-Host "Failed to commit version bump: $($_.Exception.Message)"
+              if ($_.ErrorDetails) { Write-Host $_.ErrorDetails.Message }
+              exit 1
+          }
