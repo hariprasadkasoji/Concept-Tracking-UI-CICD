@@ -44,21 +44,18 @@ jobs:
           fetch-tags: true
 
       - name: Bump version
-        run: node scripts/update-version.js
-
-      - name: Read new version into env
         shell: powershell
         run: |
-          $versionFile = "src\environments\version.ts"
-          $content = Get-Content $versionFile -Raw
+          $output = node scripts/update-version.js
+          Write-Host $output
 
-          if ($content -match "version:\s*['\`"](\d+\.\d+\.\d+)['\`"]") {
+          if ($output -match 'Version updated to (\d+\.\d+\.\d+)') {
             $newVersion = "v$($Matches[1])"
             Write-Host "New version: $newVersion"
             "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
           }
           else {
-            Write-Error "Could not find version in $versionFile"
+            Write-Error "Could not parse version from bump-version.js output"
             exit 1
           }
 
