@@ -55,7 +55,7 @@ jobs:
             "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
           }
           else {
-            Write-Error "Could not parse version from bump-version.js output"
+            Write-Error "Could not parse version from update-version.js output"
             exit 1
           }
 
