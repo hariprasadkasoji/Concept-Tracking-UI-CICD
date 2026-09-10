@@ -43,49 +43,24 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Determine next version from tags
+      - name: Bump version
+        run: node scripts/bump-version.js
+
+      - name: Read new version into env
         shell: powershell
         run: |
-          git fetch --tags --force
+          $versionFile = "src\environments\version.ts"
+          $content = Get-Content $versionFile -Raw
 
-          $tags = git tag --list "v*.*.*" |
-            Where-Object { $_ -match '^v\d+\.\d+\.\d+$' }
-
-          if ($tags) {
-            $latest = $tags |
-              Sort-Object { [version]($_ -replace '^v', '') } |
-              Select-Object -Last 1
+          if ($content -match "version:\s*['\`"](\d+\.\d+\.\d+)['\`"]") {
+            $newVersion = "v$($Matches[1])"
+            Write-Host "New version: $newVersion"
+            "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
           }
           else {
-            $latest = "v0.0.0"
+            Write-Error "Could not find version in $versionFile"
+            exit 1
           }
-
-          $latest -match '^v(\d+)\.(\d+)\.(\d+)$' | Out-Null
-
-          $major = $Matches[1]
-          $minor = $Matches[2]
-          $patch = [int]$Matches[3] + 1
-
-          $newVersion = "v$major.$minor.$patch"
-          $shortSha = $env:GITHUB_SHA.Substring(0, 7)
-          $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
-
-          Write-Host "Latest tag: $latest -> deploying as $newVersion"
-
-          $versionFile = "src\environments\version.ts"
-
-          $lines = @(
-            "// AUTO-GENERATED at build time - do not edit, do not commit changes to this file",
-            "export const VERSION = {",
-            "  version: '$newVersion',",
-            "  build: '$shortSha',",
-            "  date: '$buildDate'",
-            "};"
-          )
-
-          Set-Content -Path $versionFile -Value $lines -Encoding UTF8
-
-          "NEW_VERSION=$newVersion" >> $env:GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci
