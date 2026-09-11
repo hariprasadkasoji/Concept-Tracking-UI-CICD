@@ -37,6 +37,30 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Add Git to PATH
+        # Must run BEFORE checkout. actions/checkout probes for a working
+        # `git` on PATH; if it can't find one it silently falls back to
+        # downloading the repo as a tarball via the API instead of doing a
+        # real `git clone` - which produces a workspace with files but NO
+        # .git folder. Nothing later in this job shells out to `git`
+        # directly (version bump and tagging go through the GitHub REST
+        # API instead), so this isn't currently load-bearing here - but
+        # it keeps this workflow consistent with the backend one and
+        # avoids the same failure mode if a git-based step gets added
+        # later. If this runner is registered as a Windows service, the
+        # service account's PATH may not include git even though it's on
+        # PATH for an interactive user session.
+        shell: powershell
+        run: |
+          $gitDir = "C:\Users\hkasoji\AppData\Local\Programs\Git\cmd"
+          if (Test-Path "$gitDir\git.exe") {
+              Add-Content -Path $env:GITHUB_PATH -Value $gitDir
+              Write-Host "Added $gitDir to PATH for remaining steps."
+          } else {
+              Write-Host "git.exe not found at $gitDir - check the install path."
+              exit 1
+          }
+
       - name: Checkout latest main
         uses: actions/checkout@v4
         with:
@@ -260,4 +284,31 @@ jobs:
               if ($_.ErrorDetails) { Write-Host $_.ErrorDetails.Message }
               exit 1
           }
-          
+
+      - name: Package deploy artifact
+        # Zips the exact build output that was just deployed to IIS, so
+        # the release asset matches what's actually running - same
+        # pattern as the backend workflow's release zip.
+        shell: powershell
+        run: |
+          $zip = "$env:RUNNER_TEMP\ConceptTrackingUI-$env:NEW_VERSION.zip"
+          Compress-Archive -Path "$env:GITHUB_WORKSPACE\dist\Concept-Tracking\browser\*" -DestinationPath $zip -Force
+          Write-Host "Packaged $zip"
+
+          "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.NEW_VERSION }}
+          name: ${{ env.NEW_VERSION }}
+          generate_release_notes: true
+          body: |
+            Release of ${{ env.NEW_VERSION }}
+
+            Commit: ${{ github.sha }}
+
+            `ConceptTrackingUI-${{ env.NEW_VERSION }}.zip` is the exact build deployed to the
+            development environment. Deploy this artifact for UAT - do not use the
+            auto-generated "Source code" zip, its version is stale.
+          files: ${{ env.RELEASE_ZIP }}
